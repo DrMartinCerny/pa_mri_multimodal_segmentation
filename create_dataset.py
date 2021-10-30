@@ -20,6 +20,7 @@ def readNifti(filename):
 
 dataset_X = []
 dataset_y = []
+negative_samples = []
 
 for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
     mask = os.path.join(subject, 'mask.nii')
@@ -37,7 +38,7 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
             dwi = readNifti(dwi)
 
             # FIND TRANSFORMATIONS TO COR T SPACE
-            # TODO: register transformations to account for patient shifts
+            # TODO: register transformations to account for patient shifts between scans
             cor_t1_transform = sitk.TranslationTransform(cor_t1_c.GetDimension())
             ax_t2_transform = sitk.TranslationTransform(cor_t1_c.GetDimension())
             dwi_transform = sitk.TranslationTransform(cor_t1_c.GetDimension())
@@ -71,29 +72,33 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
             ax_t2 = ax_t2[:,left:right,top:bottom]
             dwi = dwi[:,left:right,top:bottom]
 
+            # NORMALIZE CROPPED IMAGES TO ZERO MEAN AND UNIT VARIANCE
+            cor_t1_c = StandardScaler().fit_transform(cor_t1_c.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
+            cor_t1 = StandardScaler().fit_transform(cor_t1.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
+            ax_t2 = StandardScaler().fit_transform(ax_t2.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
+            dwi = StandardScaler().fit_transform(dwi.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
+
             # ADD TO DATASET
             labeledSlices = np.sum(mask, axis=(1,2)) > 0
-            for slice, isLabeled in enumerate(labeledSlices):
-                if isLabeled:
-                    dataset_y.append(mask[slice])
-                    dataset_X.append(np.stack([cor_t1_c[slice],cor_t1[slice],ax_t2[slice],dwi[slice]],axis=-1))
+            for slice in [x[0] for x in np.argwhere(labeledSlices)]:
+                dataset_y.append(mask[slice])
+                dataset_X.append(np.stack([cor_t1_c[slice],cor_t1[slice],ax_t2[slice],dwi[slice]],axis=-1))
+            for slice in np.random.permutation([x[0] for x in np.argwhere(np.invert(labeledSlices))])[:np.count_nonzero(labeledSlices)]:
+                negative_samples.append(np.stack([cor_t1_c[slice],cor_t1[slice],ax_t2[slice],dwi[slice]],axis=-1))
 
-dataset_X = np.stack(dataset_X).astype(np.float64)
+dataset_X = np.stack(dataset_X)
+negative_samples = np.stack(negative_samples)
 dataset_y = np.stack(dataset_y)
-
-# STANDART SCALING
-dataset_X[:,:,:,0] = StandardScaler().fit_transform(dataset_X[:,:,:,0].flatten().reshape(-1,1)).reshape((len(dataset_X),config.IMG_SIZE,config.IMG_SIZE))
-dataset_X[:,:,:,1] = StandardScaler().fit_transform(dataset_X[:,:,:,1].flatten().reshape(-1,1)).reshape((len(dataset_X),config.IMG_SIZE,config.IMG_SIZE))
-dataset_X[:,:,:,2] = StandardScaler().fit_transform(dataset_X[:,:,:,2].flatten().reshape(-1,1)).reshape((len(dataset_X),config.IMG_SIZE,config.IMG_SIZE))
-dataset_X[:,:,:,3] = StandardScaler().fit_transform(dataset_X[:,:,:,3].flatten().reshape(-1,1)).reshape((len(dataset_X),config.IMG_SIZE,config.IMG_SIZE))
 
 # TODO: train/test split
 
-print(dataset_X.shape, dataset_y.shape)
+print(dataset_X.shape, dataset_y.shape, negative_samples.shape)
 
 dataset_target_file = f = h5py.File(dataset_target_file, "w")
 dataset_target_file.create_dataset("X_train", data=dataset_X)
 dataset_target_file.create_dataset("X_test", data=dataset_X)
 dataset_target_file.create_dataset("y_train", data=dataset_y)
 dataset_target_file.create_dataset("y_test", data=dataset_y)
+dataset_target_file.create_dataset("N_train", data=negative_samples)
+dataset_target_file.create_dataset("N_test", data=negative_samples)
 dataset_target_file.close()
