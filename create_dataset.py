@@ -21,7 +21,7 @@ def readNifti(filename):
 dataset_X = []
 dataset_y = []
 
-for subject in glob.glob(os.path.join(dataset_source_folder, '**'))[:2]:
+for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
     mask = os.path.join(subject, 'mask.nii')
     cor_t1_c = os.path.join(subject, 'COR_T1_c.nii')
     cor_t1 = os.path.join(subject, 'COR_T1.nii')

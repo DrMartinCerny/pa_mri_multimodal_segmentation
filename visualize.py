@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import h5py
 import cv2
-from keras.models import model_from_json
+from tensorflow import keras
 
 from src.Config import Config
 from src.Visualization import Visualization
@@ -11,17 +11,14 @@ from src.KnospScore import KnospScore
 config = Config()
 
 dataset_file = sys.argv[1]
+model_folder = sys.argv[2]
 
 dataset_file = h5py.File(dataset_file,'r')
 
 X_test = dataset_file['X_test'][:]
 y_test = dataset_file['y_test'][:]
 
-json_file = open('data/model.json', 'r')
-loaded_model_json = json_file.read()
-json_file.close()
-model = model_from_json(loaded_model_json)
-model.load_weights("data/model.h5")
+model = keras.models.load_model(model_folder)
 predicted = np.argmax(model.predict(X_test),axis=-1)
 
 print(X_test.shape, y_test.shape, predicted.shape)

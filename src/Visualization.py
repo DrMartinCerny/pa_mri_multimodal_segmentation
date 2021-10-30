@@ -11,6 +11,7 @@ class Visualization:
     
     def overlay(img,mask,a=0.7):
         # overlay with tumor and ICA labels
+        img = img.copy()
         img[mask==1,0] *= a
         img[mask==1,2] *= a
         img[mask==2,0] *= a
