@@ -11,8 +11,8 @@ config = Config()
 dataset_file = sys.argv[1]
 model_folder = sys.argv[2]
 
-generator = Generator(dataset_file,True,config.BATCH_SIZE)
-val_generator = Generator(dataset_file,False,config.BATCH_SIZE)
+generator = Generator(dataset_file,True,config)
+val_generator = Generator(dataset_file,False,config)
 model = Model(config)
 
 print(model.model.summary())

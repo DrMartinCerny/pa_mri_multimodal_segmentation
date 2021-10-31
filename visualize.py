@@ -15,9 +15,9 @@ model_folder = sys.argv[2]
 
 dataset_file = h5py.File(dataset_file,'r')
 
-X_test = dataset_file['X_test'][:]
-N_test = dataset_file['N_test'][:]
-y_test = dataset_file['y_test'][:]
+X_test = dataset_file['X_test'][:,8:-8,8:-8]
+N_test = dataset_file['N_test'][:,8:-8,8:-8]
+y_test = dataset_file['y_test'][:,8:-8,8:-8]
 
 model = keras.models.load_model(model_folder)
 predicted = np.argmax(model.predict(X_test)[0],axis=-1)
@@ -25,7 +25,7 @@ predicted = np.argmax(model.predict(X_test)[0],axis=-1)
 print(['{:1.2f}'.format(x[0]) for x in model.predict(X_test)[1]])
 print(['{:1.2f}'.format(x[0]) for x in model.predict(N_test)[1]])
 
-print(X_test.shape, y_test.shape, predicted.shape)
+print(X_test.shape, N_test.shape, y_test.shape, predicted.shape)
 
 for sample in np.random.randint(0, len(X_test), size=5):
     try:

@@ -60,10 +60,10 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
             right = np.max(np.argwhere(np.sum(mask==1,axis=(0,2))>0))
             centerX = int((left+right)/2)
             centerY = int((top+bottom)/2)
-            top = int(centerY-config.IMG_SIZE/2)
-            bottom = int(centerY+config.IMG_SIZE/2)
-            left = int(centerX-config.IMG_SIZE/2)
-            right = int(centerX+config.IMG_SIZE/2)
+            top = int(centerY-config.IMG_SIZE_UNCROPPED/2)
+            bottom = int(centerY+config.IMG_SIZE_UNCROPPED/2)
+            left = int(centerX-config.IMG_SIZE_UNCROPPED/2)
+            right = int(centerX+config.IMG_SIZE_UNCROPPED/2)
 
             # CROP IMAGES
             mask = mask[:,left:right,top:bottom]
@@ -73,10 +73,10 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
             dwi = dwi[:,left:right,top:bottom]
 
             # NORMALIZE CROPPED IMAGES TO ZERO MEAN AND UNIT VARIANCE
-            cor_t1_c = StandardScaler().fit_transform(cor_t1_c.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
-            cor_t1 = StandardScaler().fit_transform(cor_t1.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
-            ax_t2 = StandardScaler().fit_transform(ax_t2.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
-            dwi = StandardScaler().fit_transform(dwi.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE,config.IMG_SIZE))
+            cor_t1_c = StandardScaler().fit_transform(cor_t1_c.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED))
+            cor_t1 = StandardScaler().fit_transform(cor_t1.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED))
+            ax_t2 = StandardScaler().fit_transform(ax_t2.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED))
+            dwi = StandardScaler().fit_transform(dwi.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED))
 
             # ADD TO DATASET
             labeledSlices = np.sum(mask, axis=(1,2)) > 0
