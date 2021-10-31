@@ -22,6 +22,9 @@ y_test = dataset_file['y_test'][:]
 model = keras.models.load_model(model_folder)
 predicted = np.argmax(model.predict(X_test)[0],axis=-1)
 
+print(['{:1.2f}'.format(x[0]) for x in model.predict(X_test)[1]])
+print(['{:1.2f}'.format(x[0]) for x in model.predict(N_test)[1]])
+
 print(X_test.shape, y_test.shape, predicted.shape)
 
 for sample in np.random.randint(0, len(X_test), size=5):
