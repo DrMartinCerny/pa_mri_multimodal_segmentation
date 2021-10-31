@@ -39,6 +39,17 @@ class Model:
             x = skips[-1]
             skips = reversed(skips[:-1])
 
+            # Fully connected layers to predict per-sample parameters
+            fully_connected = x
+            fully_connected = tf.keras.layers.Flatten()(fully_connected)
+            fully_connected = tf.keras.layers.Dense(128)(fully_connected)
+            fully_connected = tf.keras.layers.LeakyReLU(alpha=0.2)(fully_connected)
+
+            slice_relevance = fully_connected
+            slice_relevance = tf.keras.layers.Dense(32)(slice_relevance)
+            slice_relevance = tf.keras.layers.LeakyReLU(alpha=0.2)(slice_relevance)
+            slice_relevance = tf.keras.layers.Dense(1, activation='sigmoid')(slice_relevance)
+
             # Upsampling and establishing the skip connections
             for up, skip in zip(up_stack, skips):
                 x = up(x)
@@ -52,9 +63,23 @@ class Model:
 
             x = last(x)
 
-            return tf.keras.Model(inputs=inputs, outputs=x)
+            return tf.keras.Model(inputs=inputs, outputs=[x, slice_relevance])
 
         self.model = unet_model(output_channels=config.LABEL_CLASSES+1)
         self.model.compile(optimizer='adam',
                     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                     metrics=['accuracy'])
+        
+        # Scaffold model to allow for training with negative samples too
+        scaffold_segmentation_input = tf.keras.layers.Input(shape=[config.IMG_SIZE, config.IMG_SIZE, config.NUM_CHANNELS])
+        scaffold_negative_input = tf.keras.layers.Input(shape=[config.IMG_SIZE, config.IMG_SIZE, config.NUM_CHANNELS])
+        scaffold_segmentation_output, scaffold_positive_slice_relevance = self.model(scaffold_segmentation_input)
+        _, scaffold_negative_slice_relevance = self.model(scaffold_negative_input)
+        self.scaffold_model = tf.keras.Model(inputs=[scaffold_segmentation_input,scaffold_negative_input], outputs=[scaffold_segmentation_output, scaffold_positive_slice_relevance, scaffold_negative_slice_relevance])
+        self.scaffold_model.compile(optimizer='adam',
+                    loss=[
+                        tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                        tf.keras.losses.BinaryCrossentropy(),
+                        tf.keras.losses.BinaryCrossentropy(),
+                    ],
+                    metrics=[['accuracy'],['accuracy'],['accuracy']])
