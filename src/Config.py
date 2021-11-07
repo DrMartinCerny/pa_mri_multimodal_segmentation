@@ -8,3 +8,4 @@ class Config:
         self.LABEL_CLASSES = 2
         self.BATCH_SIZE = 4
         self.TRAIN_VALIDATION_SPLIT = 0.8
+        self.IMAGE_REGISTRATION_EPOCHS = 15

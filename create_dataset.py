@@ -7,16 +7,12 @@ import h5py
 from sklearn.preprocessing import StandardScaler
 
 from src.Config import Config
+from src.ImageRegistration import ImageRegistration
 
 config = Config()
+imageRegistration = ImageRegistration(config)
 dataset_source_folder = sys.argv[1]
 dataset_target_file = sys.argv[2]
-
-def readNifti(filename):
-    reader = sitk.ImageFileReader()
-    reader.SetImageIO("NiftiImageIO")
-    reader.SetFileName(filename)
-    return reader.Execute()
 
 dataset_X = []
 dataset_y = []
@@ -29,24 +25,25 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
     ax_t2 = os.path.join(subject, 'AX_t2.nii')
     dwi = os.path.join(subject, 'DWI.nii')
     if os.path.exists(mask) and os.path.exists(cor_t1_c) and os.path.exists(cor_t1) and os.path.exists(ax_t2) and os.path.exists(dwi):
-        mask = sitk.GetArrayFromImage(readNifti(mask))
+        mask = sitk.GetArrayFromImage(sitk.ReadImage(mask, sitk.sitkInt16))
         if np.sum(mask) > 0:
             # LOAD IMAGES
-            cor_t1_c = readNifti(cor_t1_c)
-            cor_t1 = readNifti(cor_t1)
-            ax_t2 = readNifti(ax_t2)
-            dwi = readNifti(dwi)
+            cor_t1_c = sitk.ReadImage(cor_t1_c, sitk.sitkFloat32)
+            cor_t1 = sitk.ReadImage(cor_t1, sitk.sitkFloat32)
+            ax_t2 = sitk.ReadImage(ax_t2, sitk.sitkFloat32)
+            dwi = sitk.ReadImage(dwi, sitk.sitkFloat32)
 
-            # FIND TRANSFORMATIONS TO COR T SPACE
-            # TODO: register transformations to account for patient shifts between scans
-            cor_t1_transform = sitk.TranslationTransform(cor_t1_c.GetDimension())
-            ax_t2_transform = sitk.TranslationTransform(cor_t1_c.GetDimension())
-            dwi_transform = sitk.TranslationTransform(cor_t1_c.GetDimension())
+            # REGISTER IMAGES TO T COR C
+            cor_t1_transform = imageRegistration.findTransformation(cor_t1_c, cor_t1)
+            ax_t2_transform = imageRegistration.findTransformation(cor_t1_c, ax_t2)
+            dwi_transform = imageRegistration.findTransformation(cor_t1_c, dwi)
 
             # TRANSFORM IMAGES TO COR T1 SPACE
-            cor_t1 = sitk.Resample(cor_t1, cor_t1_c, cor_t1_transform, sitk.sitkNearestNeighbor, 0)
-            ax_t2 = sitk.Resample(ax_t2, cor_t1_c, ax_t2_transform, sitk.sitkNearestNeighbor, 0)
-            dwi = sitk.Resample(dwi, cor_t1_c, dwi_transform, sitk.sitkNearestNeighbor, 0)
+            cor_t1 = sitk.Resample(cor_t1, cor_t1_c, cor_t1_transform, sitk.sitkBSpline, 0)
+            ax_t2 = sitk.Resample(ax_t2, cor_t1_c, ax_t2_transform, sitk.sitkBSpline, 0)
+            dwi = sitk.Resample(dwi, cor_t1_c, dwi_transform, sitk.sitkBSpline, 0)
+
+            # GET VOXEL ARRAY DATA
             cor_t1_c = sitk.GetArrayFromImage(cor_t1_c)
             cor_t1 = sitk.GetArrayFromImage(cor_t1)
             ax_t2 = sitk.GetArrayFromImage(ax_t2)
