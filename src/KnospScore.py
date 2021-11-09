@@ -5,11 +5,19 @@ import matplotlib.pyplot as plt
 
 class KnospScore:
 
-    def __init__(self, mask):
-        #mask = self.erode(mask)
-        self.get_carotid_cross_sections(mask)
-        self.get_dividing_lines(mask)
-        self.knosp_score_left, self.knosp_score_right = self.get_knosp_score(mask)
+    def __init__(self, mask, fromArray=None):
+        if fromArray is not None:
+            # use only as object adapter for already known knosp score (ground truth or blackbox prediction)
+            self.knosp_score_left = fromArray[0]
+            self.knosp_score_right = fromArray[1]
+        else:
+            # determine knosp score from mask by geometrical method
+            #mask = self.erode(mask)
+            self.get_carotid_cross_sections(mask)
+            self.get_dividing_lines(mask)
+            self.knosp_score_left, self.knosp_score_right = self.get_knosp_score(mask)
+    
+    knospGrades = ['0', 'I', 'II', 'IIIa', 'IIIb', 'IV']
     
     def get_carotid_cross_sections(self, mask):
 

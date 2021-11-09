@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow_examples.models.pix2pix import pix2pix
 
+from KnospScore import KnospScore
+
 class Model:
 
     def __init__(self, config):
@@ -48,7 +50,13 @@ class Model:
             slice_relevance = fully_connected
             slice_relevance = tf.keras.layers.Dense(32)(slice_relevance)
             slice_relevance = tf.keras.layers.LeakyReLU(alpha=0.2)(slice_relevance)
-            slice_relevance = tf.keras.layers.Dense(1, activation='sigmoid')(slice_relevance)
+            slice_relevance = tf.keras.layers.Dense(1, activation='sigmoid', name='slice_relevance')(slice_relevance)
+            
+            knosp_score = fully_connected
+            knosp_score = tf.keras.layers.Dense(64)(knosp_score)
+            knosp_score = tf.keras.layers.LeakyReLU(alpha=0.2)(knosp_score)
+            knosp_score = tf.keras.layers.Reshape((2,32))(knosp_score)
+            knosp_score = tf.keras.layers.Dense(len(KnospScore.knospGrades), name='knosp_score')(knosp_score)
 
             # Upsampling and establishing the skip connections
             for up, skip in zip(up_stack, skips):
@@ -59,27 +67,25 @@ class Model:
             # This is the last layer of the model
             last = tf.keras.layers.Conv2DTranspose(
                 filters=output_channels, kernel_size=3, strides=2,
-                padding='same')  #64x64 -> 128x128
+                padding='same', name='predicted_segmentation')  #64x64 -> 128x128
 
             x = last(x)
 
-            return tf.keras.Model(inputs=inputs, outputs=[x, slice_relevance])
+            return tf.keras.Model(inputs=inputs, outputs=[x, slice_relevance, knosp_score])
 
         self.model = unet_model(output_channels=config.LABEL_CLASSES+1)
-        self.model.compile(optimizer='adam',
-                    loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                    metrics=['accuracy'])
         
         # Scaffold model to allow for training with negative samples too
         scaffold_segmentation_input = tf.keras.layers.Input(shape=[config.IMG_SIZE, config.IMG_SIZE, config.NUM_CHANNELS])
         scaffold_negative_input = tf.keras.layers.Input(shape=[config.IMG_SIZE, config.IMG_SIZE, config.NUM_CHANNELS])
-        scaffold_segmentation_output, scaffold_positive_slice_relevance = self.model(scaffold_segmentation_input)
-        _, scaffold_negative_slice_relevance = self.model(scaffold_negative_input)
-        self.scaffold_model = tf.keras.Model(inputs=[scaffold_segmentation_input,scaffold_negative_input], outputs=[scaffold_segmentation_output, scaffold_positive_slice_relevance, scaffold_negative_slice_relevance])
+        scaffold_segmentation_output, scaffold_positive_slice_relevance, scaffold_knosp_score = self.model(scaffold_segmentation_input)
+        _, scaffold_negative_slice_relevance, _ = self.model(scaffold_negative_input)
+        self.scaffold_model = tf.keras.Model(inputs=[scaffold_segmentation_input,scaffold_negative_input], outputs=[scaffold_segmentation_output, scaffold_positive_slice_relevance, scaffold_knosp_score, scaffold_negative_slice_relevance])
         self.scaffold_model.compile(optimizer='adam',
                     loss=[
                         tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                         tf.keras.losses.BinaryCrossentropy(),
+                        tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                         tf.keras.losses.BinaryCrossentropy(),
                     ],
-                    metrics=[['accuracy'],['accuracy'],['accuracy']])
+                    metrics=[['accuracy'],['accuracy'],['accuracy'],['accuracy']])
