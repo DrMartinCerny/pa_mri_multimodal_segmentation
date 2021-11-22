@@ -3,7 +3,7 @@ Pituitary Adenoma Segmentation From Multimodal MRI Images
 
 Usage:
 
-python create_dataset.py [dataset_folder] data/dataset.h5
+python create_dataset.py data/example-dataset data/dataset.h5
 
 python train.py data/dataset.h5 data/model
 
