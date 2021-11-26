@@ -25,8 +25,7 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
     cor_t1_c = os.path.join(subject, 'COR_T1_C.nii')
     cor_t1 = os.path.join(subject, 'COR_T1.nii')
     cor_t2 = os.path.join(subject, 'COR_T2.nii')
-    knosp = os.path.join(subject, 'knosp.yaml')
-    if os.path.exists(mask) and os.path.exists(cor_t1_c) and os.path.exists(knosp):
+    if os.path.exists(mask) and os.path.exists(cor_t1_c):
         mask = sitk.GetArrayFromImage(sitk.ReadImage(mask, sitk.sitkInt16))
         if np.sum(mask) > 0:
             # LOAD IMAGES
@@ -70,17 +69,14 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
             cor_t1_c = StandardScaler().fit_transform(cor_t1_c.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED))
             cor_t1 = StandardScaler().fit_transform(cor_t1.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED)) if cor_t1 is not None else np.zeros(cor_t1_c.shape)
             cor_t2 = StandardScaler().fit_transform(cor_t2.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED)) if cor_t2 is not None else np.zeros(cor_t1_c.shape)
-
-            # LOAD KNOSP SCORE GROUND TRUTH
-            with open(knosp) as file:
-                knosp = yaml.load(file, Loader=yaml.FullLoader)
             
             # ADD TO DATASET
             labeledSlices = np.sum(mask, axis=(1,2)) > 0
             for slice in [x[0] for x in np.argwhere(labeledSlices)]:
+                knosp = KnospScore(mask[slice])
                 dataset_y.append(mask[slice])
                 dataset_X.append(np.stack([cor_t1_c[slice],cor_t1[slice],cor_t2[slice]],axis=-1))
-                knosp_scores.append(np.array([KnospScore.knospGrades.index(knosp[str(slice)]['left']), KnospScore.knospGrades.index(knosp[str(slice)]['right'])]))
+                knosp_scores.append(np.array([knosp.knosp_score_left, knosp.knosp_score_right]))
             for slice in np.random.permutation([x[0] for x in np.argwhere(np.invert(labeledSlices))])[:np.count_nonzero(labeledSlices)]:
                 negative_samples.append(np.stack([cor_t1_c[slice],cor_t1[slice],cor_t2[slice]],axis=-1))
 
