@@ -33,8 +33,7 @@ print(X_test.shape, N_test.shape, y_test.shape, predicted.shape, K_test.shape, p
 for sample in np.random.randint(0, len(X_test), size=5):
     cor_t1_c = Visualization.toBitmap(X_test[sample,:,:,0])
     cor_t1 = Visualization.toBitmap(X_test[sample,:,:,1])
-    ax_t2 = Visualization.toBitmap(X_test[sample,:,:,2])
-    dwi = Visualization.toBitmap(X_test[sample,:,:,3])
+    cor_t2 = Visualization.toBitmap(X_test[sample,:,:,2])
     maskGroundTruth = y_test[sample]
     knospScoreGroundTruth = KnospScore(None,K_test[sample])
     knospScoreOriginalGeo = KnospScore(maskGroundTruth)
@@ -46,22 +45,19 @@ for sample in np.random.randint(0, len(X_test), size=5):
         np.concatenate([
             Visualization.upsample(cor_t1_c),
             Visualization.upsample(cor_t1),
-            Visualization.upsample(ax_t2),
-            Visualization.upsample(dwi),
+            Visualization.upsample(cor_t2),
         ],axis=1),
         # GROUND TRUTH
         np.concatenate([
             Visualization.drawKnospLines(Visualization.overlay(cor_t1_c,maskGroundTruth),knospScoreGroundTruth,knospScoreOriginalGeo),
             Visualization.drawKnospLines(Visualization.overlay(cor_t1,maskGroundTruth),knospScoreGroundTruth,knospScoreOriginalGeo),
-            Visualization.drawKnospLines(Visualization.overlay(ax_t2,maskGroundTruth),knospScoreGroundTruth,knospScoreOriginalGeo),
-            Visualization.drawKnospLines(Visualization.overlay(dwi,maskGroundTruth),knospScoreGroundTruth,knospScoreOriginalGeo),
+            Visualization.drawKnospLines(Visualization.overlay(cor_t2,maskGroundTruth),knospScoreGroundTruth,knospScoreOriginalGeo),
         ],axis=1),
         # PREDICTION
         np.concatenate([
             Visualization.drawKnospLines(Visualization.overlay(cor_t1_c,maskPrediction),knospScoreGroundTruth,knospScorePredictionGeo,knospScorePredictionBlackbox),
             Visualization.drawKnospLines(Visualization.overlay(cor_t1,maskPrediction),knospScoreGroundTruth,knospScorePredictionGeo,knospScorePredictionBlackbox),
-            Visualization.drawKnospLines(Visualization.overlay(ax_t2,maskPrediction),knospScoreGroundTruth,knospScorePredictionGeo,knospScorePredictionBlackbox),
-            Visualization.drawKnospLines(Visualization.overlay(dwi,maskPrediction),knospScoreGroundTruth,knospScorePredictionGeo,knospScorePredictionBlackbox),
+            Visualization.drawKnospLines(Visualization.overlay(cor_t2,maskPrediction),knospScoreGroundTruth,knospScorePredictionGeo,knospScorePredictionBlackbox),
         ],axis=1),
     ])
     cv2.imshow('Segmentation visualization', img)

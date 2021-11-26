@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow_examples.models.pix2pix import pix2pix
 
-from KnospScore import KnospScore
+from src.KnospScore import KnospScore
 
 class Model:
 
