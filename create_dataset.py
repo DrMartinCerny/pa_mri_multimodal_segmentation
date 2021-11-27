@@ -85,17 +85,23 @@ negative_samples = np.stack(negative_samples)
 dataset_y = np.stack(dataset_y)
 knosp_scores = np.stack(knosp_scores)
 
-# TODO: train/test split
+sample_indices = np.random.permutation(np.arange(len(dataset_X)))
+train_samples = sample_indices[:int(config.TRAIN_VALIDATION_SPLIT*len(dataset_X))]
+test_samples = sample_indices[int(config.TRAIN_VALIDATION_SPLIT*len(dataset_X)):]
 
-print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape)
+negative_sample_indices = np.random.permutation(np.arange(len(negative_samples)))
+negative_train_samples = negative_sample_indices[:int(config.TRAIN_VALIDATION_SPLIT*len(negative_samples))]
+negative_test_samples = negative_sample_indices[int(config.TRAIN_VALIDATION_SPLIT*len(negative_samples)):]
+
+print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape,'{}:{}'.format(len(train_samples),len(test_samples)))
 
 dataset_target_file = f = h5py.File(dataset_target_file, "w")
-dataset_target_file.create_dataset("X_train", data=dataset_X)
-dataset_target_file.create_dataset("X_test", data=dataset_X)
-dataset_target_file.create_dataset("y_train", data=dataset_y)
-dataset_target_file.create_dataset("y_test", data=dataset_y)
-dataset_target_file.create_dataset("N_train", data=negative_samples)
-dataset_target_file.create_dataset("N_test", data=negative_samples)
-dataset_target_file.create_dataset("K_train", data=knosp_scores)
-dataset_target_file.create_dataset("K_test", data=knosp_scores)
+dataset_target_file.create_dataset("X_train", data=dataset_X[train_samples])
+dataset_target_file.create_dataset("X_test", data=dataset_X[test_samples])
+dataset_target_file.create_dataset("y_train", data=dataset_y[train_samples])
+dataset_target_file.create_dataset("y_test", data=dataset_y[test_samples])
+dataset_target_file.create_dataset("N_train", data=negative_samples[negative_train_samples])
+dataset_target_file.create_dataset("N_test", data=negative_samples[negative_test_samples])
+dataset_target_file.create_dataset("K_train", data=knosp_scores[train_samples])
+dataset_target_file.create_dataset("K_test", data=knosp_scores[test_samples])
 dataset_target_file.close()
