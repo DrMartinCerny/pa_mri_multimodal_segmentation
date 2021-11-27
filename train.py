@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 from src.Config import Config
 from src.Generator import Generator
@@ -17,16 +18,25 @@ model = Model(config)
 
 print(model.model.summary())
 
-history = model.scaffold_model.fit(generator,validation_data=val_generator,epochs=10)
+history = model.scaffold_model.fit(generator,validation_data=val_generator,epochs=20)
 
 model.model.save(model_folder)
 
-fx,ax = plt.subplots(1,2)
-ax[0].plot(history.history['loss'], label='Loss')
-ax[0].plot(history.history['val_loss'], label='Validation loss')
-ax[1].plot(history.history['accuracy'], label='Accuracy')
-ax[1].plot(history.history['val_accuracy'], label='Validation accuracy')
-ax[0].legend(loc='upper center')
-ax[1].legend(loc='lower center')
-plt.savefig('data/train_history.png')
+with open('data/train-history.json', 'w') as outfile:
+    json.dump(history.history, outfile)
+
+variable_names = ['Segmentation', 'Positive slice relevance', 'Knosp score', 'Negative slice relevance']
+source_variables = ['functional_3', 'functional_3_1', 'functional_3_2', 'functional_3_3']
+fx,ax = plt.subplots(2,4)
+for i in range(4):
+    ax[0,i].plot(history.history[source_variables[i]+'_loss'], label='Loss')
+    ax[0,i].plot(history.history['val_'+source_variables[i]+'_loss'], label='Validation loss')
+    ax[1,i].plot(history.history[source_variables[i]+'_accuracy'], label='Accuracy')
+    ax[1,i].plot(history.history['val_'+source_variables[i]+'_accuracy'], label='Validation accuracy')
+    ax[0,i].set_xlabel(variable_names[i])
+    ax[1,i].set_xlabel(variable_names[i])
+    ax[0,i].legend(loc='upper center')
+    ax[1,i].legend(loc='lower center')
+plt.tight_layout()
+plt.savefig('data/train-history.png')
 plt.close()
