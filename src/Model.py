@@ -6,6 +6,13 @@ from src.KnospScore import KnospScore
 class Model:
 
     def __init__(self, config):
+        
+        input_shape = [
+            1+config.ADJACENT_SLICES*2,
+            config.IMG_SIZE+config.ADJACENT_SLICES*2,
+            config.IMG_SIZE+config.ADJACENT_SLICES*2,
+            config.NUM_CHANNELS
+        ]
 
         base_model = tf.keras.applications.MobileNetV2(input_shape=[config.IMG_SIZE, config.IMG_SIZE, 3], include_top=False)
 
@@ -32,8 +39,11 @@ class Model:
         ]
 
         def unet_model(output_channels:int):
-            inputs = tf.keras.layers.Input(shape=[config.IMG_SIZE, config.IMG_SIZE, config.NUM_CHANNELS])
-            embedding = tf.keras.layers.Dense(3)(inputs)
+            inputs = tf.keras.layers.Input(shape=input_shape)
+            embedding = tf.keras.layers.Conv3D(64,3)(inputs)
+            embedding = tf.keras.layers.Reshape([config.IMG_SIZE, config.IMG_SIZE, 64])(embedding)
+            embedding = tf.keras.layers.LeakyReLU(alpha=0.3)(embedding)
+            embedding = tf.keras.layers.Dense(3)(embedding)
             embedding = tf.keras.layers.LeakyReLU(alpha=0.3)(embedding)
 
             # Downsampling through the model
@@ -76,8 +86,8 @@ class Model:
         self.model = unet_model(output_channels=config.LABEL_CLASSES+1)
         
         # Scaffold model to allow for training with negative samples too
-        scaffold_segmentation_input = tf.keras.layers.Input(shape=[config.IMG_SIZE, config.IMG_SIZE, config.NUM_CHANNELS])
-        scaffold_negative_input = tf.keras.layers.Input(shape=[config.IMG_SIZE, config.IMG_SIZE, config.NUM_CHANNELS])
+        scaffold_segmentation_input = tf.keras.layers.Input(shape=input_shape)
+        scaffold_negative_input = tf.keras.layers.Input(shape=input_shape)
         scaffold_segmentation_output, scaffold_positive_slice_relevance, scaffold_knosp_score = self.model(scaffold_segmentation_input)
         _, scaffold_negative_slice_relevance, _ = self.model(scaffold_negative_input)
         self.scaffold_model = tf.keras.Model(inputs=[scaffold_segmentation_input,scaffold_negative_input], outputs=[scaffold_segmentation_output, scaffold_positive_slice_relevance, scaffold_knosp_score, scaffold_negative_slice_relevance])

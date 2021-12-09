@@ -15,10 +15,10 @@ model_folder = sys.argv[2]
 
 dataset_file = h5py.File(dataset_file,'r')
 
-X_test = dataset_file['X_test'][:,8:-8,8:-8]
-N_test = dataset_file['N_test'][:,8:-8,8:-8]
+X_test = dataset_file['X_test'][:,:,8:-8,8:-8]
+N_test = dataset_file['N_test'][:,:,8:-8,8:-8]
 K_test = dataset_file['K_test']
-y_test = dataset_file['y_test'][:,8:-8,8:-8]
+y_test = dataset_file['y_test'][:,9:-9,9:-9]
 
 model = keras.models.load_model(model_folder)
 predicted = model.predict(X_test)
@@ -30,10 +30,10 @@ print(['{:1.2f}'.format(x[0]) for x in model.predict(N_test)[1]])
 
 print(X_test.shape, N_test.shape, y_test.shape, predicted.shape, K_test.shape, predicted_knosp_scores.shape)
 
-for sample in np.random.randint(0, len(X_test), size=5):
-    cor_t1_c = Visualization.toBitmap(X_test[sample,:,:,0])
-    cor_t1 = Visualization.toBitmap(X_test[sample,:,:,1])
-    cor_t2 = Visualization.toBitmap(X_test[sample,:,:,2])
+for sample in np.random.randint(0, len(X_test), size=15):
+    cor_t1_c = Visualization.toBitmap(X_test[sample,1,1:-1,1:-1,0])
+    cor_t1 = Visualization.toBitmap(X_test[sample,1,1:-1,1:-1,1])
+    cor_t2 = Visualization.toBitmap(X_test[sample,1,1:-1,1:-1,2])
     maskGroundTruth = y_test[sample]
     knospScoreGroundTruth = KnospScore(None,K_test[sample])
     knospScoreOriginalGeo = KnospScore(maskGroundTruth)

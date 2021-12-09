@@ -38,10 +38,14 @@ class Generator(tf.keras.utils.Sequence):
         return self.crop(X, cropOffsets), self.crop(y, cropOffsets) if y is not None else None
     
     def crop(self, batch, cropOffsets):
-        if len(batch.shape) == 4:
-            cropped = np.zeros((self.config.BATCH_SIZE,self.config.IMG_SIZE,self.config.IMG_SIZE,self.config.NUM_CHANNELS))
+        if len(batch.shape) == 5:
+            cropped = np.zeros((self.config.BATCH_SIZE,self.config.ADJACENT_SLICES*2+1,self.config.IMG_SIZE_PADDED,self.config.IMG_SIZE_PADDED,self.config.NUM_CHANNELS))
+            for sample in range(self.config.BATCH_SIZE):
+                cropped[sample] = batch[sample,:,cropOffsets[sample,0]:cropOffsets[sample,0]+self.config.IMG_SIZE_PADDED,cropOffsets[sample,1]:cropOffsets[sample,1]+self.config.IMG_SIZE_PADDED]
+            return cropped
         else:
             cropped = np.zeros((self.config.BATCH_SIZE,self.config.IMG_SIZE,self.config.IMG_SIZE))
-        for sample in range(self.config.BATCH_SIZE):
-            cropped[sample] = batch[sample,cropOffsets[sample,0]:cropOffsets[sample,0]+self.config.IMG_SIZE,cropOffsets[sample,1]:cropOffsets[sample,1]+self.config.IMG_SIZE]
-        return cropped
+            for sample in range(self.config.BATCH_SIZE):
+                cropOffsets + cropOffsets + self.config.ADJACENT_SLICES
+                cropped[sample] = batch[sample,cropOffsets[sample,0]:cropOffsets[sample,0]+self.config.IMG_SIZE,cropOffsets[sample,1]:cropOffsets[sample,1]+self.config.IMG_SIZE]
+            return cropped

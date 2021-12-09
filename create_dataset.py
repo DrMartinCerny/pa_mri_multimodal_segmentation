@@ -70,15 +70,24 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
             cor_t1 = StandardScaler().fit_transform(cor_t1.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED)) if cor_t1 is not None else np.zeros(cor_t1_c.shape)
             cor_t2 = StandardScaler().fit_transform(cor_t2.flatten().reshape(-1,1)).reshape((len(cor_t1_c),config.IMG_SIZE_UNCROPPED,config.IMG_SIZE_UNCROPPED)) if cor_t2 is not None else np.zeros(cor_t1_c.shape)
             
-            # ADD TO DATASET
+            # IDENTIFY SLICES FOR BOTH POSITIVE AND NEGATIVE DATASET
             labeledSlices = np.sum(mask, axis=(1,2)) > 0
-            for slice in [x[0] for x in np.argwhere(labeledSlices)]:
+            positiveDatasetSlices = [x[0] for x in np.argwhere(labeledSlices)]
+            negativeDatasetSlices = [x[0] for x in np.argwhere(np.invert(labeledSlices))]
+            if 0 in positiveDatasetSlices: positiveDatasetSlices.remove(0)
+            if 0 in negativeDatasetSlices: negativeDatasetSlices.remove(0)
+            if len(labeledSlices)-1 in positiveDatasetSlices: positiveDatasetSlices.remove(len(labeledSlices)-1)
+            if len(labeledSlices)-1 in negativeDatasetSlices: negativeDatasetSlices.remove(len(labeledSlices)-1)
+            negativeDatasetSlices = np.random.permutation(negativeDatasetSlices)[:len(positiveDatasetSlices)]
+            
+            # ADD TO DATASET
+            for slice in positiveDatasetSlices:
                 knosp = KnospScore(mask[slice])
                 dataset_y.append(mask[slice])
-                dataset_X.append(np.stack([cor_t1_c[slice],cor_t1[slice],cor_t2[slice]],axis=-1))
+                dataset_X.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
                 knosp_scores.append(np.array([knosp.knosp_score_left, knosp.knosp_score_right]))
-            for slice in np.random.permutation([x[0] for x in np.argwhere(np.invert(labeledSlices))])[:np.count_nonzero(labeledSlices)]:
-                negative_samples.append(np.stack([cor_t1_c[slice],cor_t1[slice],cor_t2[slice]],axis=-1))
+            for slice in negativeDatasetSlices:
+                negative_samples.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
 
 dataset_X = np.stack(dataset_X)
 negative_samples = np.stack(negative_samples)
