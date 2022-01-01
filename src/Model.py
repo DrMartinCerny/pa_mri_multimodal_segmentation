@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow.keras.backend as K
 from tensorflow_examples.models.pix2pix import pix2pix
 
 from src.KnospScore import KnospScore
@@ -98,4 +99,23 @@ class Model:
                         tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                         tf.keras.losses.BinaryCrossentropy(),
                     ],
-                    metrics=[['accuracy'],['accuracy'],['accuracy'],['accuracy']])
+                    metrics=[['accuracy', dice_coef_tumor, dice_coef_ica],['accuracy'],['accuracy'],['accuracy']])
+DSC_SMOOTH = 1.    
+    
+def dice_coef(y_true, y_pred):
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (2. * intersection + DSC_SMOOTH) / (K.sum(y_true_f) + K.sum(y_pred_f) + DSC_SMOOTH)
+
+def dice_coef_by_class(y_true, y_pred, classId):
+    y_pred = K.argmax(y_pred)
+    y_true = K.cast(y_true == classId, dtype='float32')
+    y_pred = K.cast(y_pred == classId, dtype='float32')
+    return dice_coef(y_true, y_pred)
+
+def dice_coef_tumor(y_true, y_pred):
+    return dice_coef_by_class(y_true, y_pred, 1)
+
+def dice_coef_ica(y_true, y_pred):
+    return dice_coef_by_class(y_true, y_pred, 2)
