@@ -28,12 +28,19 @@ class Visualization:
     def drawKnospLines(img,knospScoreGroundTruth,knospScoreGeometric,knospScoreBlackbox=None,upsampling=2):
         img = img.copy()
         img = Visualization.upsample(img,upsampling=upsampling)
+        
+        #zurich score
+        cv2.circle(img, (int(knospScoreGeometric.zps_max_diameter_x_start*upsampling),int(knospScoreGeometric.zps_max_diameter_y*upsampling)), 2, (255, 0, 0), 2)
+        cv2.circle(img, (int(knospScoreGeometric.zps_max_diameter_x_end*upsampling),int(knospScoreGeometric.zps_max_diameter_y*upsampling)), 2, (255, 0, 0), 2)
+        try: cv2.line(img,(int(knospScoreGeometric.zps_max_diameter_x_start*upsampling),int(knospScoreGeometric.zps_max_diameter_y*upsampling)),(int(knospScoreGeometric.zps_max_diameter_x_end*upsampling),int(knospScoreGeometric.zps_max_diameter_y*upsampling)),(255, 0, 0),1)
+        except: pass
+        try: cv2.line(img,(int(knospScoreGeometric.left_intracavernous['y']*upsampling),int(knospScoreGeometric.left_intracavernous['x']*upsampling)),(int(knospScoreGeometric.right_intracavernous['y']*upsampling),int(knospScoreGeometric.right_intracavernous['x']*upsampling)),(255, 0, 0),1)
+        except: pass
 
         for cluster in [knospScoreGeometric.left_supraclinoid,knospScoreGeometric.right_supraclinoid,knospScoreGeometric.left_intracavernous,knospScoreGeometric.right_intracavernous]:
             #kolecka kolem karotid
             cv2.circle(img, (int(cluster['y']*upsampling), int(cluster['x']*upsampling)), 2, (0, 0, 255), 2)
             cv2.circle(img, (int(cluster['y']*upsampling), int(cluster['x']*upsampling)), int(cluster['diameter']*upsampling), (0, 0, 255), 1)
-        
 
         #lines
         try: cv2.line(img,knospScoreGeometric.line_start(knospScoreGeometric.left_outter_tangent,upsampling),knospScoreGeometric.line_end(knospScoreGeometric.left_outter_tangent,upsampling,128),(0, 0, 255),1)
@@ -57,14 +64,15 @@ class Visualization:
         #try: cv2.line(img,knospScore.line_start(knospScore.right_upper_limit,upsampling),knospScore.line_end(knospScore.right_upper_limit,upsampling,128),(0, 0, 255),1)
         #except: pass
         
-        Visualization.addKnospScoreLabels(img,knospScoreGroundTruth,'GT:       ',15)
-        Visualization.addKnospScoreLabels(img,knospScoreGeometric,'Geo:      ',30)
+        Visualization.addKnospScoreLabels(img,knospScoreGroundTruth,'GT:     ',15)
+        Visualization.addKnospScoreLabels(img,knospScoreGeometric,'Geo:    ',30)
         if knospScoreBlackbox is not None:
-            Visualization.addKnospScoreLabels(img,knospScoreBlackbox,'Blackbox: ',45)
+            Visualization.addKnospScoreLabels(img,knospScoreBlackbox,'Blckbx: ',45)
 
         return img
     
     def addKnospScoreLabels(img,knospScore,method,y):
         knosp_score_left = KnospScore.knospGrades[knospScore.knosp_score_left] if knospScore.knosp_score_left is not None else '??'
         knosp_score_right = KnospScore.knospGrades[knospScore.knosp_score_right] if knospScore.knosp_score_right is not None else '??'
-        cv2.putText(img, method+"Left: Knosp "+knosp_score_left+" / Right: Knosp "+knosp_score_right, (10,y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,255))
+        zurich_score =  " / ZPS: " +str(np.round(knospScore.zurich_score, decimals=2))+" ("+KnospScore.zurichGrades[knospScore.zurich_grade]+")" if knospScore.zurich_score is not None else ''
+        cv2.putText(img, method+"Knosp: left: "+knosp_score_left+", right: "+knosp_score_right + zurich_score, (10,y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,255))

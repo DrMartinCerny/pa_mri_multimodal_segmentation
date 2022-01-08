@@ -10,14 +10,17 @@ class KnospScore:
             # use only as object adapter for already known knosp score (ground truth or blackbox prediction)
             self.knosp_score_left = fromArray[0]
             self.knosp_score_right = fromArray[1]
+            self.zurich_score, self.zurich_grade = None, None
         else:
             # determine knosp score from mask by geometrical method
             #mask = self.erode(mask)
             self.get_carotid_cross_sections(mask)
             self.get_dividing_lines(mask)
             self.knosp_score_left, self.knosp_score_right = self.get_knosp_score(mask)
+            self.zurich_score, self.zurich_grade = self.get_zurich_score(mask)
     
     knospGrades = ['0', 'I', 'II', 'IIIa', 'IIIb', 'IV']
+    zurichGrades = ['I', 'II', 'III', 'IV']
     
     def get_carotid_cross_sections(self, mask):
 
@@ -112,6 +115,22 @@ class KnospScore:
         elif np.sum(self.get_subspace(right_subspace,self.right_inner_tangent,self.right_midline)) > 0:
             right = 1
         return left, right
+    
+    def get_zurich_score(self, prediction):
+        prediction = prediction==1
+        self.zps_max_diameter_y = np.argmax(np.sum(prediction, axis=-1))
+        self.zps_max_diameter_x_start = np.argmax(prediction, axis=-1)*(np.sum(prediction, axis=-1)>0)
+        self.zps_max_diameter_x_end = 128-np.argmax(np.flip(prediction, axis=-1), axis=-1)*(np.sum(prediction, axis=-1)>0)
+        self.zps_max_diameter_x_end[np.sum(prediction, axis=-1)==0] = 0
+        self.zps_max_diameter = self.zps_max_diameter_x_end-self.zps_max_diameter_x_start
+        self.zps_max_diameter_y = np.argmax(self.zps_max_diameter)
+        self.zps_max_diameter = self.zps_max_diameter[self.zps_max_diameter_y]
+        self.zps_intercarotid_distance = np.sqrt(np.power(self.left_intracavernous['x']-self.right_intracavernous['x'],2)+np.power(self.left_intracavernous['y']-self.right_intracavernous['y'],2))
+        zps = self.zps_max_diameter / self.zps_intercarotid_distance
+        self.zps_max_diameter_x_start = self.zps_max_diameter_x_start[self.zps_max_diameter_y]
+        self.zps_max_diameter_x_end = self.zps_max_diameter_x_end[self.zps_max_diameter_y]
+        has_encasement = self.knosp_score_left == 5 or self.knosp_score_right == 5
+        return zps, 3 if has_encasement else 0 if zps < 0.75 else 1 if zps < 1.25 else 2
 
     def erode(self, maska):
         eroded = np.zeros(maska.shape,dtype=np.int16)

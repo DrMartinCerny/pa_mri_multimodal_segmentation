@@ -19,6 +19,7 @@ X_test = dataset_file['X_test'][:,:,8:-8,8:-8]
 N_test = dataset_file['N_test'][:,:,8:-8,8:-8]
 K_test = dataset_file['K_test']
 y_test = dataset_file['y_test'][:,9:-9,9:-9]
+dataset_file.close()
 
 model = keras.models.load_model(model_folder)
 predicted = model.predict(X_test)

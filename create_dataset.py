@@ -20,6 +20,7 @@ dataset_X = []
 dataset_y = []
 negative_samples = []
 knosp_scores = []
+zurich_scores = []
 for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
     mask = os.path.join(subject, 'mask.nii')
     cor_t1_c = os.path.join(subject, 'COR_T1_C.nii')
@@ -86,6 +87,7 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
                 dataset_y.append(mask[slice])
                 dataset_X.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
                 knosp_scores.append(np.array([knosp.knosp_score_left, knosp.knosp_score_right]))
+                zurich_scores.append(knosp.zurich_score)
             for slice in negativeDatasetSlices:
                 negative_samples.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
 
@@ -93,6 +95,7 @@ dataset_X = np.stack(dataset_X)
 negative_samples = np.stack(negative_samples)
 dataset_y = np.stack(dataset_y)
 knosp_scores = np.stack(knosp_scores)
+zurich_scores = np.stack(zurich_scores)
 
 sample_indices = np.random.permutation(np.arange(len(dataset_X)))
 train_samples = sample_indices[:int(config.TRAIN_VALIDATION_SPLIT*len(dataset_X))]
@@ -102,9 +105,9 @@ negative_sample_indices = np.random.permutation(np.arange(len(negative_samples))
 negative_train_samples = negative_sample_indices[:int(config.TRAIN_VALIDATION_SPLIT*len(negative_samples))]
 negative_test_samples = negative_sample_indices[int(config.TRAIN_VALIDATION_SPLIT*len(negative_samples)):]
 
-print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape,'{}:{}'.format(len(train_samples),len(test_samples)))
+print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape, zurich_scores.shape,'{}:{}'.format(len(train_samples),len(test_samples)))
 
-dataset_target_file = f = h5py.File(dataset_target_file, "w")
+dataset_target_file = h5py.File(dataset_target_file, "w")
 dataset_target_file.create_dataset("X_train", data=dataset_X[train_samples])
 dataset_target_file.create_dataset("X_test", data=dataset_X[test_samples])
 dataset_target_file.create_dataset("y_train", data=dataset_y[train_samples])
@@ -113,4 +116,6 @@ dataset_target_file.create_dataset("N_train", data=negative_samples[negative_tra
 dataset_target_file.create_dataset("N_test", data=negative_samples[negative_test_samples])
 dataset_target_file.create_dataset("K_train", data=knosp_scores[train_samples])
 dataset_target_file.create_dataset("K_test", data=knosp_scores[test_samples])
+dataset_target_file.create_dataset("Z_train", data=zurich_scores[train_samples])
+dataset_target_file.create_dataset("Z_test", data=zurich_scores[test_samples])
 dataset_target_file.close()
