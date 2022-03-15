@@ -8,6 +8,8 @@ class Model:
 
     def __init__(self, config):
         
+        self.config = config
+        
         input_shape = [
             1+config.ADJACENT_SLICES*2,
             config.IMG_SIZE+config.ADJACENT_SLICES*2,
@@ -99,23 +101,31 @@ class Model:
                         tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                         tf.keras.losses.BinaryCrossentropy(),
                     ],
-                    metrics=[['accuracy', dice_coef_tumor, dice_coef_ica],['accuracy'],['accuracy'],['accuracy']])
-DSC_SMOOTH = 1.    
+                    metrics=[['accuracy', self.dice_coef_total, self.dice_coef_tumor, self.dice_coef_ica, self.dice_coef_normal_gland],['accuracy'],['accuracy'],['accuracy']])
     
-def dice_coef(y_true, y_pred):
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    return (2. * intersection + DSC_SMOOTH) / (K.sum(y_true_f) + K.sum(y_pred_f) + DSC_SMOOTH)
+    def dice_coef(self, y_true, y_pred):
+        y_true = K.flatten(y_true)
+        y_pred = K.flatten(y_pred)
+        intersection = K.sum(y_true * y_pred)
+        return (2. * intersection + self.config.DICE_COEF_SMOOTH) / (K.sum(y_true) + K.sum(y_pred) + self.config.DICE_COEF_SMOOTH)
 
-def dice_coef_by_class(y_true, y_pred, classId):
-    y_pred = K.argmax(y_pred)
-    y_true = K.cast(y_true == classId, dtype='float32')
-    y_pred = K.cast(y_pred == classId, dtype='float32')
-    return dice_coef(y_true, y_pred)
+    def dice_coef_by_class(self, y_true, y_pred, classId):
+        y_pred = K.argmax(y_pred)
+        y_pred = K.cast(y_pred == classId, dtype='float32')
+        y_true = K.cast(y_true == classId, dtype='float32')
+        return self.dice_coef(y_true, y_pred)
 
-def dice_coef_tumor(y_true, y_pred):
-    return dice_coef_by_class(y_true, y_pred, 1)
+    def dice_coef_total(self, y_true, y_pred):
+        y_pred = K.argmax(y_pred)
+        y_pred = K.one_hot(K.cast(y_pred, dtype='int32'), self.config.LABEL_CLASSES+1)
+        y_true = K.one_hot(K.cast(y_true, dtype='int32'), self.config.LABEL_CLASSES+1)
+        return self.dice_coef(y_true, y_pred)
 
-def dice_coef_ica(y_true, y_pred):
-    return dice_coef_by_class(y_true, y_pred, 2)
+    def dice_coef_tumor(self, y_true, y_pred):
+        return self.dice_coef_by_class(y_true, y_pred, 1)
+
+    def dice_coef_ica(self, y_true, y_pred):
+        return self.dice_coef_by_class(y_true, y_pred, 2)
+
+    def dice_coef_normal_gland(self, y_true, y_pred):
+        return self.dice_coef_by_class(y_true, y_pred, 3)
