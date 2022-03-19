@@ -18,6 +18,10 @@ class Visualization:
         img[mask==1,2] *= a
         img[mask==2,0] *= a
         img[mask==2,1] *= a
+        img[mask==3,2] *= a
+        img[mask==3,1] *= a
+        img[mask==4,2] *= a
+        img[mask==4,1] *= a
         return img
     
     def upsample(img,upsampling=2):

@@ -8,27 +8,18 @@ class Generator(tf.keras.utils.Sequence):
         dataset_file = h5py.File(dataset_file,'r')
         self.X = dataset_file['X_train' if isTrain else 'X_test'][:]
         self.y = dataset_file['y_train' if isTrain else 'y_test'][:]
-        self.N = dataset_file['N_train' if isTrain else 'N_test'][:]
-        self.K = dataset_file['K_train' if isTrain else 'K_test'][:]
         self.numSamples = len(self.X)
-        self.numNegatSamples = len(self.N)
         self.config = config
         self.on_epoch_end()
 
     def on_epoch_end(self):
         self.indices = np.reshape(np.random.permutation(np.arange(self.numSamples))[:len(self)*self.config.BATCH_SIZE], (len(self),self.config.BATCH_SIZE))
-        self.negative_indices = np.reshape(np.random.permutation(np.arange(self.numNegatSamples))[:len(self)*self.config.BATCH_SIZE], (len(self),self.config.BATCH_SIZE))
     
     def __getitem__(self, index):
         X = self.X[self.indices[index]]
         y = self.y[self.indices[index]]
-        N = self.N[self.negative_indices[index]]
-        K = self.K[self.indices[index]]
         X, y = self.dataAugmentation(X, y)
-        N, _ = self.dataAugmentation(N, None)
-        positive_slice_relevances = np.ones((self.config.BATCH_SIZE,1))
-        negative_slice_relevances = np.zeros((self.config.BATCH_SIZE,1))
-        return [X,N], [y, positive_slice_relevances, K, negative_slice_relevances]
+        return X, y
     
     def __len__(self):
         return self.numSamples // self.config.BATCH_SIZE

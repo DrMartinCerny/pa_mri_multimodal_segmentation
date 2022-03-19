@@ -17,6 +17,7 @@ class KnospScore:
             self.get_carotid_cross_sections(mask)
             self.get_dividing_lines(mask)
             self.knosp_score_left, self.knosp_score_right = self.get_knosp_score(mask)
+            self.has_carotic_encasement = self.knosp_score_left == 5 or self.knosp_score_right == 5
             self.zurich_score, self.zurich_grade = self.get_zurich_score(mask)
     
     knospGrades = ['0', 'I', 'II', 'IIIa', 'IIIb', 'IV']
@@ -25,8 +26,8 @@ class KnospScore:
     def get_carotid_cross_sections(self, mask):
 
         points = []
-        for o in range(128):
-            for u in range(128):
+        for o in range(mask.shape[0]):
+            for u in range(mask.shape[1]):
                 if mask[o,u] == 2:
                     points.append([o,u])
 
@@ -120,7 +121,7 @@ class KnospScore:
         prediction = prediction==1
         self.zps_max_diameter_y = np.argmax(np.sum(prediction, axis=-1))
         self.zps_max_diameter_x_start = np.argmax(prediction, axis=-1)*(np.sum(prediction, axis=-1)>0)
-        self.zps_max_diameter_x_end = 128-np.argmax(np.flip(prediction, axis=-1), axis=-1)*(np.sum(prediction, axis=-1)>0)
+        self.zps_max_diameter_x_end = prediction.shape[0]-np.argmax(np.flip(prediction, axis=-1), axis=-1)*(np.sum(prediction, axis=-1)>0)
         self.zps_max_diameter_x_end[np.sum(prediction, axis=-1)==0] = 0
         self.zps_max_diameter = self.zps_max_diameter_x_end-self.zps_max_diameter_x_start
         self.zps_max_diameter_y = np.argmax(self.zps_max_diameter)
@@ -129,8 +130,7 @@ class KnospScore:
         zps = self.zps_max_diameter / self.zps_intercarotid_distance
         self.zps_max_diameter_x_start = self.zps_max_diameter_x_start[self.zps_max_diameter_y]
         self.zps_max_diameter_x_end = self.zps_max_diameter_x_end[self.zps_max_diameter_y]
-        has_encasement = self.knosp_score_left == 5 or self.knosp_score_right == 5
-        return zps, 3 if has_encasement else 0 if zps < 0.75 else 1 if zps < 1.25 else 2
+        return zps, 3 if self.has_carotic_encasement else 0 if zps < 0.75 else 1 if zps < 1.25 else 2
 
     def erode(self, maska):
         eroded = np.zeros(maska.shape,dtype=np.int16)
