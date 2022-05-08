@@ -1,7 +1,7 @@
 class Config:
 
     def __init__(self):
-        self.IMG_SIZE = 128
+        self.IMG_SIZE = 192
         self.NUM_CHANNELS = 3
         self.ADJACENT_SLICES = 1
         self.CROP_OFFSET = 16
