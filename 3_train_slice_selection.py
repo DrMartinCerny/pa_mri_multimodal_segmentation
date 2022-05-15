@@ -32,13 +32,13 @@ del N_test
 
 print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-model = Model(config).slice_selection_model(os.path.join(model_folder, 'segmentation'))
+model = Model(config).slice_selection_model()
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_folder, 'slice-selection'), save_best_only=True)
 
 print(model.summary())
 
 
-history = model.fit(x=X_train,y=y_train,validation_data=(X_test,y_test),epochs=100,callbacks=[model_checkpoint_callback])
+history = model.fit(x=X_train,y=y_train,validation_data=(X_test,y_test),epochs=50,callbacks=[model_checkpoint_callback])
 
-with open('data/train-history-slice-selection.json', 'w') as outfile:
+with open(os.path.join(model_folder, 'train-history-slice-selection.json'), 'w') as outfile:
     json.dump(history.history, outfile)

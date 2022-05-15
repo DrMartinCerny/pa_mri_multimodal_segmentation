@@ -3,6 +3,7 @@ import tensorflow.keras.backend as K
 from tensorflow_examples.models.pix2pix import pix2pix
 
 from src.PretrainedModel import unet
+from src.KnospScore import KnospScore
 
 class Model:
 
@@ -11,33 +12,8 @@ class Model:
         self.config = config
         
     def segmentation_model(self):
-        
-        input_shape = [
-            1+self.config.ADJACENT_SLICES*2,
-            self.config.IMG_SIZE+self.config.ADJACENT_SLICES*2,
-            self.config.IMG_SIZE+self.config.ADJACENT_SLICES*2,
-            self.config.NUM_CHANNELS
-        ]
-        
-        inputs = tf.keras.layers.Input(shape=input_shape)
-        embedding = tf.keras.layers.Conv3D(64,3)(inputs)
-        embedding = tf.keras.layers.Reshape([self.config.IMG_SIZE, self.config.IMG_SIZE, 64])(embedding)
-        embedding = tf.keras.layers.LeakyReLU(alpha=0.3)(embedding)
-        embedding = tf.keras.layers.Dense(32)(embedding)
-        embedding = tf.keras.layers.LeakyReLU(alpha=0.3)(embedding)
 
-        pretrained_model = self.pretrained_model()
-        pretrained_output = pretrained_model(embedding)
-        block_4_convolution_1 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(pretrained_output[2])
-        block_4_activation_1 = tf.keras.layers.LeakyReLU(alpha=0.3)(block_4_convolution_1)
-        block_4_convolution_2 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_4_activation_1)
-        block_4_activation_2 = tf.keras.layers.Activation('relu')(block_4_convolution_2)
-        block_4_max_pooling = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(block_4_activation_2)
-        block_5_convolution_1 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_4_max_pooling)
-        block_5_activation_1 = tf.keras.layers.LeakyReLU(alpha=0.3)(block_5_convolution_1)
-        block_5_convolution_2 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_5_activation_1)
-        block_5_activation_2 = tf.keras.layers.Activation('relu')(block_5_convolution_2)
-        block_5_max_pooling = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(block_5_activation_2)
+        inputs, downsampling_stack = self.pretrained_model()
 
         up_stack = [
             pix2pix.upsample(512, 3),  # 4x4 -> 8x8
@@ -47,7 +23,7 @@ class Model:
         ]
 
         # Downsampling through the model
-        skips = [pretrained_output[0],pretrained_output[1],pretrained_output[2],block_4_max_pooling,block_5_max_pooling]
+        skips = downsampling_stack
         x = skips[-1]
         skips = reversed(skips[:-1])
 
@@ -71,32 +47,68 @@ class Model:
         
         return model
     
-    def slice_selection_model(self, segmentation_model_folder):
+    def slice_selection_model(self):
         
-        segmentation_model = tf.keras.models.load_model(segmentation_model_folder, compile=False,
-            custom_objects={'dice_coef_total': self.dice_coef_total, 'dice_coef_tumor': self.dice_coef_tumor, 'dice_coef_ica': self.dice_coef_ica, 'dice_coef_normal_gland': self.dice_coef_normal_gland})
-        segmentation_model.trainable = False
-        segmentation_model_input = segmentation_model.inputs[0]
-        segmentation_model_output = segmentation_model.get_layer('max_pooling2d_5').output
-        
-        slice_relevance = tf.keras.layers.Flatten()(segmentation_model_output)
+        inputs, downsampling_stack = self.pretrained_model()        
+        slice_relevance = tf.keras.layers.Flatten()(downsampling_stack[-1])
         slice_relevance = tf.keras.layers.Dense(128, name='Dense1')(slice_relevance)
         slice_relevance = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU1')(slice_relevance)
         slice_relevance = tf.keras.layers.Dense(32, name='Dense2')(slice_relevance)
         slice_relevance = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU2')(slice_relevance)
         slice_relevance = tf.keras.layers.Dense(1, activation='sigmoid', name='slice_relevance')(slice_relevance)
         
-        model = tf.keras.Model(inputs=segmentation_model_input, outputs=slice_relevance)
+        model = tf.keras.Model(inputs=inputs, outputs=slice_relevance)
         model.compile(optimizer='adam',loss=tf.keras.losses.BinaryCrossentropy(),metrics='accuracy')
+        return model
+    
+    def knosp_score_model(self):
+        
+        inputs, downsampling_stack = self.pretrained_model()        
+        knosp_score = tf.keras.layers.Flatten()(downsampling_stack[-1])
+        knosp_score = tf.keras.layers.Dense(128, name='Dense1')(knosp_score)
+        knosp_score = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU1')(knosp_score)
+        knosp_score = tf.keras.layers.Dense(32, name='Dense2')(knosp_score)
+        knosp_score = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU2')(knosp_score)
+        knosp_score = tf.keras.layers.Dense(len(KnospScore.knospGrades), name='knosp_score')(knosp_score)
+        
+        model = tf.keras.Model(inputs=inputs, outputs=knosp_score)
+        model.compile(optimizer='adam',loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics='accuracy')
+        return model
+    
+    def zps_model(self):
+        
+        inputs, downsampling_stack = self.pretrained_model()        
+        zps = tf.keras.layers.Flatten()(downsampling_stack[-1])
+        zps = tf.keras.layers.Dense(128, name='Dense1')(zps)
+        zps = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU1')(zps)
+        zps = tf.keras.layers.Dense(32, name='Dense2')(zps)
+        zps = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU2')(zps)
+        zps = tf.keras.layers.Dense(len(KnospScore.zurichGrades), name='zps')(zps)
+        
+        model = tf.keras.Model(inputs=inputs, outputs=zps)
+        model.compile(optimizer='adam',loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics='accuracy')
         return model
     
     def pretrained_model(self):
         
+        input_shape = [
+            1+self.config.ADJACENT_SLICES*2,
+            self.config.IMG_SIZE+self.config.ADJACENT_SLICES*2,
+            self.config.IMG_SIZE+self.config.ADJACENT_SLICES*2,
+            self.config.NUM_CHANNELS
+        ]
+        inputs = tf.keras.layers.Input(shape=input_shape)
+        embedding = tf.keras.layers.Conv3D(64,3)(inputs)
+        embedding = tf.keras.layers.Reshape([self.config.IMG_SIZE, self.config.IMG_SIZE, 64])(embedding)
+        embedding = tf.keras.layers.LeakyReLU(alpha=0.3)(embedding)
+        embedding = tf.keras.layers.Dense(32)(embedding)
+        embedding = tf.keras.layers.LeakyReLU(alpha=0.3)(embedding)
+        
         pretrained_model = unet()
         pretrained_model.load_weights("data/pretrained_weights.h5")
-
-        inputs_pretrained = tf.keras.layers.Input(shape=[self.config.IMG_SIZE,self.config.IMG_SIZE,32])
-        block_1_convolution_1 = pretrained_model.get_layer('conv2d_2')(inputs_pretrained)
+        pretrained_model.trainable = False
+        
+        block_1_convolution_1 = pretrained_model.get_layer('conv2d_2')(embedding)
         block_1_activation_1 = pretrained_model.get_layer('activation_2')(block_1_convolution_1)
         block_1_convolution_2 = pretrained_model.get_layer('conv2d_3')(block_1_activation_1)
         block_1_activation_2 = pretrained_model.get_layer('activation_3')(block_1_convolution_2)
@@ -111,11 +123,19 @@ class Model:
         block_3_convolution_2 = pretrained_model.get_layer('conv2d_7')(block_3_activation_1)
         block_3_activation_2 = pretrained_model.get_layer('activation_7')(block_3_convolution_2)
         block_3_max_pooling = pretrained_model.get_layer('max_pooling2d_3')(block_3_activation_2)
-
-        pretrained_downsampling_stack = tf.keras.Model(inputs=inputs_pretrained, outputs=[block_1_max_pooling,block_2_max_pooling,block_3_max_pooling])
-        pretrained_downsampling_stack.trainable = False
         
-        return pretrained_downsampling_stack
+        block_4_convolution_1 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_3_max_pooling)
+        block_4_activation_1 = tf.keras.layers.LeakyReLU(alpha=0.3)(block_4_convolution_1)
+        block_4_convolution_2 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_4_activation_1)
+        block_4_activation_2 = tf.keras.layers.Activation('relu')(block_4_convolution_2)
+        block_4_max_pooling = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(block_4_activation_2)
+        block_5_convolution_1 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_4_max_pooling)
+        block_5_activation_1 = tf.keras.layers.LeakyReLU(alpha=0.3)(block_5_convolution_1)
+        block_5_convolution_2 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_5_activation_1)
+        block_5_activation_2 = tf.keras.layers.Activation('relu')(block_5_convolution_2)
+        block_5_max_pooling = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(block_5_activation_2)
+        
+        return inputs, [block_1_max_pooling,block_2_max_pooling,block_3_max_pooling,block_4_max_pooling,block_5_max_pooling]
     
     def dice_coef(self, y_true, y_pred):
         y_true = K.flatten(y_true)
