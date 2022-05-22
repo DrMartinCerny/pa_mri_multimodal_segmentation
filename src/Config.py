@@ -12,3 +12,4 @@ class Config:
         self.TRAIN_VALIDATION_SPLIT = 0.8
         self.IMAGE_REGISTRATION_EPOCHS = 15
         self.DICE_COEF_SMOOTH = 1.0
+        self.USE_CLASS_WEIGHTS = False

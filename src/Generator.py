@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import h5py
+from sklearn.utils import class_weight
 
 class Generator(tf.keras.utils.Sequence):
 
@@ -10,6 +11,7 @@ class Generator(tf.keras.utils.Sequence):
         self.y = dataset_file['y_train' if isTrain else 'y_test'][:]
         self.numSamples = len(self.X)
         self.config = config
+        self.class_weights = class_weight.compute_class_weight('balanced', classes=np.arange(config.LABEL_CLASSES+1), y=self.y.flatten())
         self.on_epoch_end()
 
     def on_epoch_end(self):
@@ -19,7 +21,10 @@ class Generator(tf.keras.utils.Sequence):
         X = self.X[self.indices[index]]
         y = self.y[self.indices[index]]
         X, y = self.dataAugmentation(X, y)
-        return X, y
+        if self.config.USE_CLASS_WEIGHTS:
+            return X, y, self.sample_weights(y)
+        else:
+            return X, y
     
     def __len__(self):
         return self.numSamples // self.config.BATCH_SIZE
@@ -40,3 +45,9 @@ class Generator(tf.keras.utils.Sequence):
                 cropOffsets + cropOffsets + self.config.ADJACENT_SLICES
                 cropped[sample] = batch[sample,cropOffsets[sample,0]:cropOffsets[sample,0]+self.config.IMG_SIZE,cropOffsets[sample,1]:cropOffsets[sample,1]+self.config.IMG_SIZE]
             return cropped
+    
+    def sample_weights(self, y):
+        weights = np.zeros(y.shape)
+        for i in range(len(self.class_weights)):
+            weights[y==i] = self.class_weights[i]
+        return weights
