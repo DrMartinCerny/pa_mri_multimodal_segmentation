@@ -1,7 +1,6 @@
 import sys
 import glob
 import os
-import yaml
 import numpy as np
 import SimpleITK as sitk
 import h5py
@@ -16,17 +15,17 @@ imageRegistration = ImageRegistration(config)
 dataset_source_folder = sys.argv[1]
 dataset_target_file = sys.argv[2]
 
-dataset_X = []
-dataset_y = []
-negative_samples = []
-knosp_scores = []
-zurich_scores = []
-g = len(glob.glob(os.path.join(dataset_source_folder, '**')))
-i = 1
-for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
-    print('{}/{} {}'.format(i,g,subject))
-    i += 1
-    try:
+dataset_target_file = h5py.File(dataset_target_file, "w")
+
+for split in ['train', 'test']:
+    files = glob.glob(os.path.join(dataset_source_folder, split, '**'))
+    dataset_X = []
+    dataset_y = []
+    negative_samples = []
+    knosp_scores = []
+    zurich_scores = []
+    for i, subject in enumerate(files):
+        print('{}/{} {}'.format(i+1,len(files),subject))
         mask = os.path.join(subject, 'mask.nii')
         cor_t1_c = os.path.join(subject, 'COR_T1_C.nii')
         cor_t1 = os.path.join(subject, 'COR_T1.nii')
@@ -38,7 +37,6 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
                 cor_t1_c = sitk.ReadImage(cor_t1_c, sitk.sitkFloat32)
                 cor_t1 = sitk.ReadImage(cor_t1, sitk.sitkFloat32) if os.path.exists(cor_t1) else None
                 cor_t2 = sitk.ReadImage(cor_t2, sitk.sitkFloat32) if os.path.exists(cor_t2) else None
-                assert(mask.shape==cor_t1_c.shape)
 
                 # REGISTER IMAGES TO T COR C
                 cor_t1_transform = imageRegistration.findTransformation(cor_t1_c, cor_t1) if cor_t1 is not None else None
@@ -52,6 +50,7 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
                 cor_t1_c = sitk.GetArrayFromImage(cor_t1_c)
                 cor_t1 = sitk.GetArrayFromImage(cor_t1) if cor_t1 is not None else None
                 cor_t2 = sitk.GetArrayFromImage(cor_t2) if cor_t2 is not None else None
+                assert(mask.shape==cor_t1_c.shape)
 
                 # FIND AREA OF INTEREST WITHIN THE IMAGE
                 # TODO: image center computed as center of tumor label, can induce bias, switch to atlas registration later
@@ -92,34 +91,22 @@ for subject in glob.glob(os.path.join(dataset_source_folder, '**')):
                     zurich_scores.append(knosp.zurich_grade)
                 for slice in negativeDatasetSlices:
                     negative_samples.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
-    except:
-        pass
 
-dataset_X = np.stack(dataset_X)
-negative_samples = np.stack(negative_samples)
-dataset_y = np.stack(dataset_y)
-knosp_scores = np.stack(knosp_scores)
-zurich_scores = np.stack(zurich_scores)
+    dataset_X = np.stack(dataset_X)
+    negative_samples = np.stack(negative_samples)
+    dataset_y = np.stack(dataset_y)
+    knosp_scores = np.stack(knosp_scores)
+    zurich_scores = np.stack(zurich_scores)
 
-sample_indices = np.random.permutation(np.arange(len(dataset_X)))
-train_samples = sample_indices[:int(config.TRAIN_VALIDATION_SPLIT*len(dataset_X))]
-test_samples = sample_indices[int(config.TRAIN_VALIDATION_SPLIT*len(dataset_X)):]
+    sample_indices = np.random.permutation(np.arange(len(dataset_X)))
+    negative_sample_indices = np.random.permutation(np.arange(len(negative_samples)))
 
-negative_sample_indices = np.random.permutation(np.arange(len(negative_samples)))
-negative_train_samples = negative_sample_indices[:int(config.TRAIN_VALIDATION_SPLIT*len(negative_samples))]
-negative_test_samples = negative_sample_indices[int(config.TRAIN_VALIDATION_SPLIT*len(negative_samples)):]
+    print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape, zurich_scores.shape)
 
-print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape, zurich_scores.shape,'{}:{}'.format(len(train_samples),len(test_samples)))
+    dataset_target_file.create_dataset("X_"+split, data=dataset_X[sample_indices])
+    dataset_target_file.create_dataset("y_"+split, data=dataset_y[sample_indices])
+    dataset_target_file.create_dataset("N_"+split, data=negative_samples[negative_sample_indices])
+    dataset_target_file.create_dataset("K_"+split, data=knosp_scores[sample_indices])
+    dataset_target_file.create_dataset("Z_"+split, data=zurich_scores[sample_indices])
 
-dataset_target_file = h5py.File(dataset_target_file, "w")
-dataset_target_file.create_dataset("X_train", data=dataset_X[train_samples])
-dataset_target_file.create_dataset("X_test", data=dataset_X[test_samples])
-dataset_target_file.create_dataset("y_train", data=dataset_y[train_samples])
-dataset_target_file.create_dataset("y_test", data=dataset_y[test_samples])
-dataset_target_file.create_dataset("N_train", data=negative_samples[negative_train_samples])
-dataset_target_file.create_dataset("N_test", data=negative_samples[negative_test_samples])
-dataset_target_file.create_dataset("K_train", data=knosp_scores[train_samples])
-dataset_target_file.create_dataset("K_test", data=knosp_scores[test_samples])
-dataset_target_file.create_dataset("Z_train", data=zurich_scores[train_samples])
-dataset_target_file.create_dataset("Z_test", data=zurich_scores[test_samples])
 dataset_target_file.close()
