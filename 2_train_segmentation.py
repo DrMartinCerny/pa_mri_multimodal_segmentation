@@ -7,11 +7,11 @@ from src.Config import Config
 from src.Generator import Generator
 from src.Model import Model
 
-config = Config()
+config_file = sys.argv[1]
+dataset_file = sys.argv[2]
+model_folder = sys.argv[3]
 
-dataset_file = sys.argv[1]
-model_folder = sys.argv[2]
-
+config = Config(config_file)
 generator = Generator(dataset_file,True,config)
 val_generator = Generator(dataset_file,False,config)
 model = Model(config).segmentation_model()

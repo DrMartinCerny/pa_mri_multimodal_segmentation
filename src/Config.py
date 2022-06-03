@@ -1,20 +1,26 @@
+import yaml
+
 class Config:
 
-    def __init__(self):
-        self.IMG_SIZE = 192
-        self.NUM_CHANNELS = 2
-        self.ADJACENT_SLICES = 1
-        self.CROP_OFFSET = 16
-        self.IMG_SIZE_PADDED = self.IMG_SIZE + self.ADJACENT_SLICES*2
-        self.IMG_SIZE_UNCROPPED = self.IMG_SIZE_PADDED + self.CROP_OFFSET
-        self.LABEL_CLASSES = 3
-        self.BATCH_SIZE = 16
-        self.TRAIN_VALIDATION_SPLIT = 0.8
-        self.IMAGE_REGISTRATION_EPOCHS = 15
-        self.DICE_COEF_SMOOTH = 1.0
-        self.USE_CLASS_WEIGHTS = False
-        self.PRETRAINED_WEIGHTS_PATH = 'data/pretrained_weights.h5'
-        self.PRETRAINED_WEIGHTS_TRAINABLE = False
-        self.ONLY_NONNULL_INPUTS =True
-        self.EPOCHS_SEGMENTATION = 50
-        self.EPOCHS_CLASSIFIERS = 50
+    def __init__(self, config_file):
+        with open(config_file, 'r') as config_file:
+            config = yaml.safe_load(config_file)
+            
+            self.IMG_SIZE = config['DATASET_EXTRACTION']['IMG_SIZE']
+            self.NUM_CHANNELS = config['DATASET_EXTRACTION']['NUM_CHANNELS']
+            self.ADJACENT_SLICES = config['DATASET_EXTRACTION']['ADJACENT_SLICES']
+            self.CROP_OFFSET = config['DATASET_EXTRACTION']['CROP_OFFSET']
+            self.IMG_SIZE_PADDED = self.IMG_SIZE + self.ADJACENT_SLICES*2
+            self.IMG_SIZE_UNCROPPED = self.IMG_SIZE_PADDED + self.CROP_OFFSET
+            self.LABEL_CLASSES = config['DATASET_EXTRACTION']['LABEL_CLASSES']
+            self.IMAGE_REGISTRATION_EPOCHS = config['DATASET_EXTRACTION']['IMAGE_REGISTRATION_EPOCHS']
+            
+            self.DICE_COEF_SMOOTH = config['MODEL_CONFIGURATION']['DICE_COEF_SMOOTH']
+            self.USE_CLASS_WEIGHTS = config['MODEL_CONFIGURATION']['USE_CLASS_WEIGHTS']
+            self.PRETRAINED_WEIGHTS_PATH = config['MODEL_CONFIGURATION']['PRETRAINED_WEIGHTS_PATH']
+            self.PRETRAINED_WEIGHTS_TRAINABLE = config['MODEL_CONFIGURATION']['PRETRAINED_WEIGHTS_TRAINABLE']
+            self.ONLY_NONNULL_INPUTS = config['MODEL_CONFIGURATION']['ONLY_NONNULL_INPUTS']
+            
+            self.BATCH_SIZE = config['TRAINING']['BATCH_SIZE']
+            self.EPOCHS_SEGMENTATION = config['TRAINING']['EPOCHS_SEGMENTATION']
+            self.EPOCHS_CLASSIFIERS = config['TRAINING']['EPOCHS_CLASSIFIERS']

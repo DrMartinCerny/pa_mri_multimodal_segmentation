@@ -8,10 +8,11 @@ import numpy as np
 from src.Config import Config
 from src.Model import Model
 
-config = Config()
+config_file = sys.argv[1]
+dataset_file = sys.argv[2]
+model_folder = sys.argv[3]
 
-dataset_file = sys.argv[1]
-model_folder = sys.argv[2]
+config = Config()
 
 dataset_file = h5py.File(dataset_file,'r')
 X_train = dataset_file['X_train'][:,:,8:-8,8:-8]
