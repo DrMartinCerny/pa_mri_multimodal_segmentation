@@ -7,8 +7,12 @@ class Generator(tf.keras.utils.Sequence):
 
     def __init__(self, dataset_file, isTrain, config):
         dataset_file = h5py.File(dataset_file,'r')
-        self.X = dataset_file['X_train' if isTrain else 'X_test'][:]
+        self.X = dataset_file['X_train' if isTrain else 'X_test'][:,:,:,:,:config.NUM_CHANNELS]
         self.y = dataset_file['y_train' if isTrain else 'y_test'][:]
+        if config.ONLY_NONNULL_INPUTS:
+            valid_samples = np.argwhere(np.all(np.all(self.X==0, axis=(1,2,3))==False,axis=-1))[:,0]
+            self.X = self.X[valid_samples]
+            self.y = self.y[valid_samples]
         self.numSamples = len(self.X)
         self.config = config
         self.class_weights = class_weight.compute_class_weight('balanced', classes=np.arange(config.LABEL_CLASSES+1), y=self.y.flatten())

@@ -19,7 +19,7 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.
 
 print(model.summary())
 
-history = model.fit(generator,validation_data=val_generator,epochs=50,callbacks=[model_checkpoint_callback])
+history = model.fit(generator,validation_data=val_generator,epochs=config.EPOCHS_SEGMENTATION,callbacks=[model_checkpoint_callback])
 
 with open(os.path.join(model_folder, 'train-history-segmentation.json'), 'w') as outfile:
     json.dump(history.history, outfile)

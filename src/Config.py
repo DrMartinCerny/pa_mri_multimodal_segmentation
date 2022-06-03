@@ -2,7 +2,7 @@ class Config:
 
     def __init__(self):
         self.IMG_SIZE = 192
-        self.NUM_CHANNELS = 3
+        self.NUM_CHANNELS = 2
         self.ADJACENT_SLICES = 1
         self.CROP_OFFSET = 16
         self.IMG_SIZE_PADDED = self.IMG_SIZE + self.ADJACENT_SLICES*2
@@ -13,3 +13,8 @@ class Config:
         self.IMAGE_REGISTRATION_EPOCHS = 15
         self.DICE_COEF_SMOOTH = 1.0
         self.USE_CLASS_WEIGHTS = False
+        self.PRETRAINED_WEIGHTS_PATH = 'data/pretrained_weights.h5'
+        self.PRETRAINED_WEIGHTS_TRAINABLE = False
+        self.ONLY_NONNULL_INPUTS =True
+        self.EPOCHS_SEGMENTATION = 50
+        self.EPOCHS_CLASSIFIERS = 50

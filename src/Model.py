@@ -1,6 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow_examples.models.pix2pix import pix2pix
+import os
 
 from src.PretrainedModel import unet
 from src.KnospScore import KnospScore
@@ -105,8 +106,9 @@ class Model:
         embedding = tf.keras.layers.LeakyReLU(alpha=0.3)(embedding)
         
         pretrained_model = unet()
-        pretrained_model.load_weights("data/pretrained_weights.h5")
-        pretrained_model.trainable = False
+        if self.config.PRETRAINED_WEIGHTS_PATH is not None and os.path.exists(self.config.PRETRAINED_WEIGHTS_PATH):
+            pretrained_model.load_weights(self.config.PRETRAINED_WEIGHTS_PATH)
+            pretrained_model.trainable = self.config.PRETRAINED_WEIGHTS_TRAINABLE
         
         block_1_convolution_1 = pretrained_model.get_layer('conv2d_2')(embedding)
         block_1_activation_1 = pretrained_model.get_layer('activation_2')(block_1_convolution_1)

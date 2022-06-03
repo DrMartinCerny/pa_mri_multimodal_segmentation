@@ -29,7 +29,7 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.
 print(model.summary())
 
 
-history = model.fit(x=X_train,y=Z_train,validation_data=(X_test,Z_test),epochs=50,callbacks=[model_checkpoint_callback])
+history = model.fit(x=X_train,y=Z_train,validation_data=(X_test,Z_test),epochs=config.EPOCHS_CLASSIFIERS,callbacks=[model_checkpoint_callback])
 
 with open(os.path.join(model_folder, 'zurich-pituitary-score.json'), 'w') as outfile:
     json.dump(history.history, outfile)
