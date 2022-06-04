@@ -2,18 +2,20 @@ import sys
 import glob
 import os
 import numpy as np
+import yaml
 import SimpleITK as sitk
 import h5py
 from sklearn.preprocessing import StandardScaler
 
 from src.Config import Config
 from src.ImageRegistration import ImageRegistration
-from src.KnospScore import KnospScore
 
-config = Config()
+config_file = sys.argv[1]
+dataset_source_folder = sys.argv[2]
+dataset_target_file = sys.argv[3]
+
+config = Config(config_file)
 imageRegistration = ImageRegistration(config)
-dataset_source_folder = sys.argv[1]
-dataset_target_file = sys.argv[2]
 
 dataset_target_file = h5py.File(dataset_target_file, "w")
 
@@ -23,14 +25,14 @@ for split in ['train', 'test']:
     dataset_y = []
     negative_samples = []
     knosp_scores = []
-    zurich_scores = []
     for i, subject in enumerate(files):
         print('{}/{} {}'.format(i+1,len(files),subject))
         mask = os.path.join(subject, 'mask.nii')
         cor_t1_c = os.path.join(subject, 'COR_T1_C.nii')
         cor_t1 = os.path.join(subject, 'COR_T1.nii')
         cor_t2 = os.path.join(subject, 'COR_T2.nii')
-        if os.path.exists(mask) and os.path.exists(cor_t1_c):
+        knosp_score = os.path.join(subject, 'knosp.yaml')
+        if os.path.exists(mask) and os.path.exists(cor_t1_c) and os.path.exists(knosp_score):
             mask = sitk.GetArrayFromImage(sitk.ReadImage(mask, sitk.sitkInt16))
             if np.sum(mask) > 0:
                 # LOAD IMAGES
@@ -82,13 +84,15 @@ for split in ['train', 'test']:
                 if len(labeledSlices)-1 in negativeDatasetSlices: negativeDatasetSlices.remove(len(labeledSlices)-1)
                 negativeDatasetSlices = np.random.permutation(negativeDatasetSlices)[:len(positiveDatasetSlices)]
                 
+                # LOAD KNOSP SCORE
+                with open(knosp_score, 'r') as knosp_score:
+                    knosp_score = yaml.safe_load(knosp_score)
+                
                 # ADD TO DATASET
                 for slice in positiveDatasetSlices:
-                    knosp = KnospScore(mask[slice])
                     dataset_y.append(mask[slice])
                     dataset_X.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
-                    knosp_scores.append(np.array([knosp.knosp_score_left, knosp.knosp_score_right]))
-                    zurich_scores.append(knosp.zurich_grade)
+                    knosp_scores.append(np.array([knosp_score[str(slice)]['knosp_left'], knosp_score[str(slice)]['knosp_right']]))
                 for slice in negativeDatasetSlices:
                     negative_samples.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
 
@@ -96,17 +100,15 @@ for split in ['train', 'test']:
     negative_samples = np.stack(negative_samples)
     dataset_y = np.stack(dataset_y)
     knosp_scores = np.stack(knosp_scores)
-    zurich_scores = np.stack(zurich_scores)
 
     sample_indices = np.random.permutation(np.arange(len(dataset_X)))
     negative_sample_indices = np.random.permutation(np.arange(len(negative_samples)))
 
-    print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape, zurich_scores.shape)
+    print(dataset_X.shape, dataset_y.shape, negative_samples.shape, knosp_scores.shape)
 
     dataset_target_file.create_dataset("X_"+split, data=dataset_X[sample_indices])
     dataset_target_file.create_dataset("y_"+split, data=dataset_y[sample_indices])
     dataset_target_file.create_dataset("N_"+split, data=negative_samples[negative_sample_indices])
     dataset_target_file.create_dataset("K_"+split, data=knosp_scores[sample_indices])
-    dataset_target_file.create_dataset("Z_"+split, data=zurich_scores[sample_indices])
 
 dataset_target_file.close()
