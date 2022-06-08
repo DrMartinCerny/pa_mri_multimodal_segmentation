@@ -1,6 +1,5 @@
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow_examples.models.pix2pix import pix2pix
 import os
 
 from src.PretrainedModel import unet
@@ -16,30 +15,27 @@ class Model:
 
         inputs, downsampling_stack = self.pretrained_model()
 
-        up_stack = [
-            pix2pix.upsample(512, 3),  # 4x4 -> 8x8
-            pix2pix.upsample(256, 3),  # 8x8 -> 16x16
-            pix2pix.upsample(128, 3),  # 16x16 -> 32x32
-            pix2pix.upsample(64, 3),   # 32x32 -> 64x64
-        ]
-
         # Downsampling through the model
         skips = downsampling_stack
         x = skips[-1]
         skips = reversed(skips[:-1])
 
         # Upsampling and establishing the skip connections
-        for up, skip in zip(up_stack, skips):
-            x = up(x)
+        nr_units = 512
+        for skip in skips:
+            x = tf.keras.layers.Conv2DTranspose(nr_units, 3, strides=2, padding='same')(x)
+            x = tf.keras.layers.BatchNormalization()(x)
+            x = tf.keras.layers.Dropout(0.5)(x)
+            x = tf.keras.layers.LeakyReLU(alpha=0.2)(x)
             concat = tf.keras.layers.Concatenate()
             x = concat([x, skip])
+            if nr_units > 64:
+                nr_units /= 2
 
-        # This is the last layer of the model
-        last = tf.keras.layers.Conv2DTranspose(
-            filters=self.config.LABEL_CLASSES+1, kernel_size=3, strides=2,
-            padding='same', name='predicted_segmentation')  #64x64 -> 128x128
-
-        x = last(x)
+        # Final layer for computing logits
+        x = tf.keras.layers.Conv2DTranspose(
+            filters=self.config.LABEL_CLASSES+1, kernel_size=3, strides=2, padding='same', name='predicted_segmentation'
+        )(x)
 
         model = tf.keras.Model(inputs=inputs, outputs=x)
         model.compile(optimizer='adam',
@@ -126,18 +122,22 @@ class Model:
         block_3_activation_2 = pretrained_model.get_layer('activation_7')(block_3_convolution_2)
         block_3_max_pooling = pretrained_model.get_layer('max_pooling2d_3')(block_3_activation_2)
         
-        block_4_convolution_1 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_3_max_pooling)
-        block_4_activation_1 = tf.keras.layers.LeakyReLU(alpha=0.3)(block_4_convolution_1)
-        block_4_convolution_2 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_4_activation_1)
-        block_4_activation_2 = tf.keras.layers.Activation('relu')(block_4_convolution_2)
-        block_4_max_pooling = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(block_4_activation_2)
-        block_5_convolution_1 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_4_max_pooling)
-        block_5_activation_1 = tf.keras.layers.LeakyReLU(alpha=0.3)(block_5_convolution_1)
-        block_5_convolution_2 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(block_5_activation_1)
-        block_5_activation_2 = tf.keras.layers.Activation('relu')(block_5_convolution_2)
-        block_5_max_pooling = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(block_5_activation_2)
+        outputs = [block_1_max_pooling,block_2_max_pooling,block_3_max_pooling]
         
-        return inputs, [block_1_max_pooling,block_2_max_pooling,block_3_max_pooling,block_4_max_pooling,block_5_max_pooling]
+        if self.config.DOWNSAMPLING_LAYERS < 3 or self.config.DOWNSAMPLING_LAYERS > 6:
+            raise Exception('The number of downsampling layers has to be between 3 and 6')
+        
+        for i in range(self.config.DOWNSAMPLING_LAYERS-3):
+            convolution_1 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(outputs[-1])
+            batch_norm = tf.keras.layers.BatchNormalization()(convolution_1)
+            dropout = tf.keras.layers.Dropout(0.5)(batch_norm)
+            activation_1 = tf.keras.layers.LeakyReLU(alpha=0.3)(dropout)
+            convolution_2 = tf.keras.layers.Conv2D(256, (3, 3), padding='same')(activation_1)
+            activation_2 = tf.keras.layers.Activation('relu')(convolution_2)
+            max_pooling = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(activation_2)
+            outputs.append(max_pooling)
+        
+        return inputs, outputs
     
     def dice_coef(self, y_true, y_pred):
         y_true = K.flatten(y_true)
