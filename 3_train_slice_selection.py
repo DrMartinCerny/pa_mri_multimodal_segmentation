@@ -12,13 +12,13 @@ config_file = sys.argv[1]
 dataset_file = sys.argv[2]
 model_folder = sys.argv[3]
 
-config = Config()
+config = Config(config_file)
 
 dataset_file = h5py.File(dataset_file,'r')
-X_train = dataset_file['X_train'][:,:,8:-8,8:-8]
-X_test = dataset_file['X_test'][:,:,8:-8,8:-8]
-N_train = dataset_file['N_train'][:,:,8:-8,8:-8]
-N_test = dataset_file['N_test'][:,:,8:-8,8:-8]
+X_train = dataset_file['X_train'][:,:,8:-8,8:-8,:config.NUM_CHANNELS]
+X_test = dataset_file['X_test'][:,:,8:-8,8:-8,:config.NUM_CHANNELS]
+N_train = dataset_file['N_train'][:,:,8:-8,8:-8,:config.NUM_CHANNELS]
+N_test = dataset_file['N_test'][:,:,8:-8,8:-8,:config.NUM_CHANNELS]
 dataset_file.close()
 
 print(X_train.shape, X_test.shape, N_train.shape, N_test.shape)

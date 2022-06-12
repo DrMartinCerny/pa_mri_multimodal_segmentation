@@ -90,8 +90,8 @@ class Model:
         
         input_shape = [
             1+self.config.ADJACENT_SLICES*2,
-            self.config.IMG_SIZE+self.config.ADJACENT_SLICES*2,
-            self.config.IMG_SIZE+self.config.ADJACENT_SLICES*2,
+            self.config.IMG_SIZE_PADDED,
+            self.config.IMG_SIZE_PADDED,
             self.config.NUM_CHANNELS
         ]
         inputs = tf.keras.layers.Input(shape=input_shape)

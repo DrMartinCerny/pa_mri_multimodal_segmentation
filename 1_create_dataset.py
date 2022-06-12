@@ -54,8 +54,7 @@ for split in ['train', 'test']:
                 cor_t2 = sitk.GetArrayFromImage(cor_t2) if cor_t2 is not None else None
                 assert(mask.shape==cor_t1_c.shape)
 
-                # FIND AREA OF INTEREST WITHIN THE IMAGE
-                # TODO: image center computed as center of tumor label, can induce bias, switch to atlas registration later
+                # CROP IMAGES
                 centerX = int(cor_t1_c.shape[1]/2)
                 centerY = int(cor_t1_c.shape[2]/2)
                 top = int(centerY-config.IMG_SIZE_UNCROPPED/2)
