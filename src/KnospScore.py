@@ -1,7 +1,7 @@
 import numpy as np
-import cv2
-
-BLOB_DETECTION_PADDING = 10
+from sklearn.cluster import KMeans
+from scipy import ndimage
+import matplotlib.pyplot as plt
 
 class KnospScore:
 
@@ -19,22 +19,28 @@ class KnospScore:
     
     def get_carotid_cross_sections(self, mask):
         
-        params = cv2.SimpleBlobDetector_Params()
-        params.filterByArea = True
-        params.minArea = 10
-        detector = cv2.SimpleBlobDetector_create(params)
-        mask = np.pad(mask, ((BLOB_DETECTION_PADDING,BLOB_DETECTION_PADDING),(BLOB_DETECTION_PADDING,BLOB_DETECTION_PADDING)))
-        mask = (mask!=2).astype(np.uint8)*255
-        mask = cv2.blur(mask,(5,5))
-        keypoints = detector.detect(mask)
-        keypoints = list(sorted(keypoints, key=lambda item: item.size, reverse=True))[:4]
-        assert len(keypoints) == 4
-        
-        clusters = [{
-            'x': x.pt[1]-BLOB_DETECTION_PADDING,
-            'y': x.pt[0]-BLOB_DETECTION_PADDING,
-            'diameter': x.size/2,
-        } for x in keypoints]
+        points = []
+        for o in range(mask.shape[0]):
+            for u in range(mask.shape[1]):
+                if mask[o,u] == 2:
+                    points.append([o,u])
+
+        kmeans = KMeans(n_clusters=4, random_state=0).fit(points).labels_
+
+        clusters = [{'points': []} for u in range(4)]
+
+        for i in range(len(clusters)):
+            for o in range(len(points)):
+                if kmeans[o] == i:
+                    clusters[i]['points'].append(points[o])
+
+        for cluster in clusters:
+            cluster['points'] = np.array(cluster['points'])
+            cluster['x'] = np.mean(cluster['points'][:,0])
+            cluster['y'] = np.mean(cluster['points'][:,1])
+            cluster['width'] = np.mean(np.abs(cluster['points'][:,0]-cluster['x']))*2
+            cluster['height'] = np.mean(np.abs(cluster['points'][:,1]-cluster['y']))*2
+            cluster['diameter'] = (cluster['width']+cluster['height'])/2
 
         clusters = list(sorted(clusters, key=lambda item: item['y']))
         left = list(sorted(clusters[:2], key=lambda item: item['x']))
