@@ -15,10 +15,17 @@ model_folder = sys.argv[3]
 config = Config(config_file)
 
 dataset_file = h5py.File(dataset_file,'r')
-X_train = dataset_file['X_train'][:,:,8:-8,8:-8,:config.NUM_CHANNELS]
-X_test = dataset_file['X_test'][:,:,8:-8,8:-8,:config.NUM_CHANNELS]
+X_train = dataset_file['X_train'][:,:,int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),:config.NUM_CHANNELS]
+X_test = dataset_file['X_test'][:,:,int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),:config.NUM_CHANNELS]
 K_train = dataset_file['K_train'][:]
 K_test = dataset_file['K_test'][:]
+
+# Augmenting the dataset with flipped versions of the images
+X_train = np.concatenate([X_train,np.flip(X_train, axis=3)])
+X_test = np.concatenate([X_test,np.flip(X_test, axis=3)])
+K_train = np.concatenate([K_train,np.flip(K_train, axis=1)])
+K_test = np.concatenate([K_test,np.flip(K_test, axis=1)])
+
 dataset_file.close()
 
 K_train = np.max(K_train, axis=-1)
