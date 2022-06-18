@@ -64,25 +64,12 @@ class Model:
         knosp_score = tf.keras.layers.Flatten()(downsampling_stack[-1])
         knosp_score = tf.keras.layers.Dense(128, name='Dense1')(knosp_score)
         knosp_score = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU1')(knosp_score)
+        knosp_score = tf.keras.layers.Reshape((2, 64))(knosp_score)
         knosp_score = tf.keras.layers.Dense(32, name='Dense2')(knosp_score)
         knosp_score = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU2')(knosp_score)
         knosp_score = tf.keras.layers.Dense(len(KnospScore.knospGrades), name='knosp_score')(knosp_score)
         
         model = tf.keras.Model(inputs=inputs, outputs=knosp_score)
-        model.compile(optimizer='adam',loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics='accuracy')
-        return model
-    
-    def zps_model(self):
-        
-        inputs, downsampling_stack = self.pretrained_model()        
-        zps = tf.keras.layers.Flatten()(downsampling_stack[-1])
-        zps = tf.keras.layers.Dense(128, name='Dense1')(zps)
-        zps = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU1')(zps)
-        zps = tf.keras.layers.Dense(32, name='Dense2')(zps)
-        zps = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU2')(zps)
-        zps = tf.keras.layers.Dense(len(KnospScore.zurichGrades), name='zps')(zps)
-        
-        model = tf.keras.Model(inputs=inputs, outputs=zps)
         model.compile(optimizer='adam',loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics='accuracy')
         return model
     
