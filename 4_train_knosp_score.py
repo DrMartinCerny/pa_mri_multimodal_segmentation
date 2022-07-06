@@ -11,6 +11,7 @@ from src.Model import Model
 config_file = sys.argv[1]
 dataset_file = sys.argv[2]
 model_folder = sys.argv[3]
+if not os.path.exists(model_folder): os.mkdir(model_folder)
 
 config = Config(config_file)
 
@@ -28,7 +29,7 @@ K_train = np.concatenate([K_train,np.flip(K_train, axis=1)])
 K_test = np.concatenate([K_test,np.flip(K_test, axis=1)])
 
 model = Model(config).knosp_score_model()
-model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_folder, 'knosp-score'), save_best_only=True)
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_folder, 'knosp-score.h5'), save_best_only=True, save_weights_only=True)
 
 print(model.summary())
 

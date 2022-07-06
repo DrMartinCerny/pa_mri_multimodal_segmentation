@@ -11,6 +11,7 @@ from src.Model import Model
 config_file = sys.argv[1]
 dataset_file = sys.argv[2]
 model_folder = sys.argv[3]
+if not os.path.exists(model_folder): os.mkdir(model_folder)
 
 config = Config(config_file)
 
@@ -34,7 +35,7 @@ del N_test
 print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
 model = Model(config).slice_selection_model()
-model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_folder, 'slice-selection'), save_best_only=True)
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_folder, 'slice-selection.h5'), save_best_only=True, save_weights_only=True)
 
 print(model.summary())
 

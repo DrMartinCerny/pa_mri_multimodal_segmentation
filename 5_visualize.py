@@ -22,11 +22,15 @@ knospScoreGroundTruth = dataset_file['K_test'][:]
 maskGroundTruth = dataset_file['y_test'][:,int(config.CROP_OFFSET/2)+1:-int(config.CROP_OFFSET/2)-1,int(config.CROP_OFFSET/2)+1:-int(config.CROP_OFFSET/2)-1]
 dataset_file.close()
 
-model = keras.models.load_model(os.path.join(model_folder, 'segmentation'), compile=False, custom_objects={'dice_coef_total': model.dice_coef_total, 'dice_coef_tumor': model.dice_coef_tumor, 'dice_coef_ica': model.dice_coef_ica, 'dice_coef_normal_gland': model.dice_coef_normal_gland})
+model = Model(config).segmentation_model(compile=False)
+model.load_weights(os.path.join(model_folder, 'segmentation.h5'))
 maskPredicted = np.argmax(model.predict(X_test),axis=-1)
+keras.backend.clear_session()
 
-model = keras.models.load_model(os.path.join(model_folder, 'knosp-score'))
+model = Model(config).knosp_score_model(compile=False)
+model.load_weights(os.path.join(model_folder, 'knosp-score.h5'))
 knospScorePredicted = np.argmax(model.predict(X_test),axis=-1)
+keras.backend.clear_session()
 
 for sample in np.random.randint(0, len(X_test), size=2):
     img = Visualization.toBitmap(X_test[sample,1,1:-1,1:-1,0])

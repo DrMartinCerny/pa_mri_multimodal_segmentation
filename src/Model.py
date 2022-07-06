@@ -11,7 +11,7 @@ class Model:
         
         self.config = config
         
-    def segmentation_model(self):
+    def segmentation_model(self, compile=True):
 
         inputs, downsampling_stack = self.pretrained_model()
 
@@ -38,13 +38,14 @@ class Model:
         )(x)
 
         model = tf.keras.Model(inputs=inputs, outputs=x)
-        model.compile(optimizer='adam',
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-            metrics=['accuracy', self.dice_coef_total, self.dice_coef_tumor, self.dice_coef_ica, self.dice_coef_normal_gland])
+        if compile:
+            model.compile(optimizer='adam',
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                metrics=[self.dice_coef_total, self.dice_coef_tumor, self.dice_coef_ica, self.dice_coef_normal_gland])
         
         return model
     
-    def slice_selection_model(self):
+    def slice_selection_model(self, compile=True):
         
         inputs, downsampling_stack = self.pretrained_model()        
         slice_relevance = tf.keras.layers.Flatten()(downsampling_stack[-1])
@@ -55,10 +56,11 @@ class Model:
         slice_relevance = tf.keras.layers.Dense(1, activation='sigmoid', name='slice_relevance')(slice_relevance)
         
         model = tf.keras.Model(inputs=inputs, outputs=slice_relevance)
-        model.compile(optimizer='adam',loss=tf.keras.losses.BinaryCrossentropy(),metrics='accuracy')
+        if compile:
+            model.compile(optimizer='adam',loss=tf.keras.losses.BinaryCrossentropy(),metrics='accuracy')
         return model
     
-    def knosp_score_model(self):
+    def knosp_score_model(self, compile=True):
         
         inputs, downsampling_stack = self.pretrained_model()        
         knosp_score = tf.keras.layers.Flatten()(downsampling_stack[-1])
@@ -70,7 +72,8 @@ class Model:
         knosp_score = tf.keras.layers.Dense(len(KnospScore.knospGrades), name='knosp_score')(knosp_score)
         
         model = tf.keras.Model(inputs=inputs, outputs=knosp_score)
-        model.compile(optimizer='adam',loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics='accuracy')
+        if compile:
+            model.compile(optimizer='adam',loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),metrics='accuracy')
         return model
     
     def pretrained_model(self):

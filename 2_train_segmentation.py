@@ -10,12 +10,13 @@ from src.Model import Model
 config_file = sys.argv[1]
 dataset_file = sys.argv[2]
 model_folder = sys.argv[3]
+if not os.path.exists(model_folder): os.mkdir(model_folder)
 
 config = Config(config_file)
 generator = Generator(dataset_file,True,config)
 val_generator = Generator(dataset_file,False,config)
 model = Model(config).segmentation_model()
-model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_folder, 'segmentation'), save_best_only=True)
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(model_folder, 'segmentation.h5'), save_best_only=True, save_weights_only=True)
 
 print(model.summary())
 

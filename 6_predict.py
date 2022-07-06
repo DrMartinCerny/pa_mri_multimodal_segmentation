@@ -69,14 +69,18 @@ if os.path.exists(cor_t1_c):
         if cor_t2 is not None : X[i,:,:,:,2] = cor_t2[i:i+1+config.ADJACENT_SLICES*2]
 
     # PREDICT SEGMENTATION
-    model = keras.models.load_model(os.path.join(model_folder, 'segmentation'), compile=False, custom_objects={'dice_coef_total': model.dice_coef_total, 'dice_coef_tumor': model.dice_coef_tumor, 'dice_coef_ica': model.dice_coef_ica, 'dice_coef_normal_gland': model.dice_coef_normal_gland})
+    model = Model(config).segmentation_model(compile=False)
+    model.load_weights(os.path.join(model_folder, 'segmentation.h5'))
     predicted = model.predict(X)
     predicted = np.argmax(predicted,axis=-1)
+    keras.backend.clear_session()
 
     # REMOVE IRRELEVANT SLICES FROM SEGMENTATION
-    model = keras.models.load_model(os.path.join(model_folder, 'slice-selection'), compile=False)
+    model = Model(config).slice_selection_model(compile=False)
+    model.load_weights(os.path.join(model_folder, 'slice-selection.h5'))
     irrelevant_slices = [x[0] < 0.5 for x in model.predict(X)]
     predicted[irrelevant_slices,:,:] = 0
+    keras.backend.clear_session()
     
     # SAVE MASK
     mask = np.zeros(original_shape, dtype=np.int16)
