@@ -17,23 +17,23 @@ model_folder = sys.argv[3]
 
 dataset_file = h5py.File(dataset_file,'r')
 
-X_test = dataset_file['X_test'][:,:,int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),:config.NUM_CHANNELS].astype(np.float64)
-knospScoreGroundTruth = dataset_file['K_test'][:]
-maskGroundTruth = dataset_file['y_test'][:,int(config.CROP_OFFSET/2)+1:-int(config.CROP_OFFSET/2)-1,int(config.CROP_OFFSET/2)+1:-int(config.CROP_OFFSET/2)-1]
+X_val = dataset_file['X_val'][:,:,int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),int(config.CROP_OFFSET/2):-int(config.CROP_OFFSET/2),:config.NUM_CHANNELS].astype(np.float64)
+knospScoreGroundTruth = dataset_file['K_val'][:]
+maskGroundTruth = dataset_file['y_val'][:,int(config.CROP_OFFSET/2)+1:-int(config.CROP_OFFSET/2)-1,int(config.CROP_OFFSET/2)+1:-int(config.CROP_OFFSET/2)-1]
 dataset_file.close()
 
 model = Model(config).segmentation_model(compile=False)
 model.load_weights(os.path.join(model_folder, 'segmentation.h5'))
-maskPredicted = np.argmax(model.predict(X_test),axis=-1)
+maskPredicted = np.argmax(model.predict(X_val),axis=-1)
 keras.backend.clear_session()
 
 model = Model(config).knosp_score_model(compile=False)
 model.load_weights(os.path.join(model_folder, 'knosp-score.h5'))
-knospScorePredicted = np.argmax(model.predict(X_test),axis=-1)
+knospScorePredicted = np.argmax(model.predict(X_val),axis=-1)
 keras.backend.clear_session()
 
-for sample in np.random.randint(0, len(X_test), size=2):
-    img = Visualization.toBitmap(X_test[sample,1,1:-1,1:-1,0])
+for sample in np.random.randint(0, len(X_val), size=2):
+    img = Visualization.toBitmap(X_val[sample,1,1:-1,1:-1,0])
     Visualization.overlay(img,maskPredicted[sample])
     img = Visualization.upsample(img)
     Visualization.contours(img,maskGroundTruth[sample])

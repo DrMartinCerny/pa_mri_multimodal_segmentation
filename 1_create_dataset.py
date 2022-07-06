@@ -19,7 +19,7 @@ imageRegistration = ImageRegistration(config)
 
 dataset_target_file = h5py.File(dataset_target_file, "w")
 
-for split in ['train', 'test']:
+for split in ['train', 'val']:
     files = glob.glob(os.path.join(dataset_source_folder, split, '**'))
     dataset_X = []
     dataset_y = []
