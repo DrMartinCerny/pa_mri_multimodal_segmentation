@@ -16,6 +16,7 @@ dataset_target_file = sys.argv[3]
 
 config = Config(config_file)
 imageRegistration = ImageRegistration(config)
+knospGrades = {x[1]:x[0] for x in enumerate(['0', 'I', 'II', 'IIIa', 'IIIb', 'IV'])}
 
 dataset_target_file = h5py.File(dataset_target_file, "w")
 
@@ -91,7 +92,7 @@ for split in ['train', 'val']:
                 for slice in positiveDatasetSlices:
                     dataset_y.append(mask[slice])
                     dataset_X.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
-                    knosp_scores.append(np.array([knosp_score[str(slice)]['knosp_left'], knosp_score[str(slice)]['knosp_right']]))
+                    knosp_scores.append(np.array([knospGrades[knosp_score[str(slice)]['knosp_left']], knospGrades[knosp_score[str(slice)]['knosp_right']]]))
                 for slice in negativeDatasetSlices:
                     negative_samples.append(np.stack([cor_t1_c[slice-1:slice+2],cor_t1[slice-1:slice+2],cor_t2[slice-1:slice+2]],axis=-1))
 

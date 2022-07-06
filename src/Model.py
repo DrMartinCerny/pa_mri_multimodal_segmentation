@@ -3,7 +3,6 @@ import tensorflow.keras.backend as K
 import os
 
 from src.PretrainedModel import unet
-from src.KnospScore import KnospScore
 
 class Model:
 
@@ -69,7 +68,7 @@ class Model:
         knosp_score = tf.keras.layers.Reshape((2, 64))(knosp_score)
         knosp_score = tf.keras.layers.Dense(32, name='Dense2')(knosp_score)
         knosp_score = tf.keras.layers.LeakyReLU(alpha=0.2, name='LeakyReLU2')(knosp_score)
-        knosp_score = tf.keras.layers.Dense(len(KnospScore.knospGrades), name='knosp_score')(knosp_score)
+        knosp_score = tf.keras.layers.Dense(6, name='knosp_score')(knosp_score)
         
         model = tf.keras.Model(inputs=inputs, outputs=knosp_score)
         if compile:
