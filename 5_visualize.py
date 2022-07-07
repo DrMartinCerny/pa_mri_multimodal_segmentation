@@ -32,7 +32,7 @@ model.load_weights(os.path.join(model_folder, 'knosp-score.h5'))
 knospScorePredicted = np.argmax(model.predict(X_val),axis=-1)
 keras.backend.clear_session()
 
-for sample in np.random.randint(0, len(X_val), size=2):
+for sample in np.random.randint(0, len(X_val), size=10):
     img = Visualization.toBitmap(X_val[sample,1,1:-1,1:-1,0])
     Visualization.overlay(img,maskPredicted[sample])
     img = Visualization.upsample(img)

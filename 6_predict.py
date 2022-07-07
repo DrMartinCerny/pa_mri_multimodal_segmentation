@@ -2,7 +2,6 @@ import sys
 import os
 import numpy as np
 import SimpleITK as sitk
-import nibabel as nib
 from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
 
@@ -28,6 +27,7 @@ if os.path.exists(cor_t1_c):
     cor_t1_c = sitk.ReadImage(cor_t1_c, sitk.sitkFloat32)
     cor_t1 = sitk.ReadImage(cor_t1, sitk.sitkFloat32) if os.path.exists(cor_t1) and config.NUM_CHANNELS >= 2 else None
     cor_t2 = sitk.ReadImage(cor_t2, sitk.sitkFloat32) if os.path.exists(cor_t2) and config.NUM_CHANNELS >= 3 else None
+    original_image = cor_t1_c
 
     # REGISTER IMAGES TO T COR C
     cor_t1_transform = imageRegistration.findTransformation(cor_t1_c, cor_t1) if cor_t1 is not None else None
@@ -85,5 +85,8 @@ if os.path.exists(cor_t1_c):
     # SAVE MASK
     mask = np.zeros(original_shape, dtype=np.int16)
     mask[1:-1,left+1:right-1,top+1:bottom-1] = predicted
-    mask = np.swapaxes(mask,0,2)
-    nib.save(nib.Nifti1Image(mask, np.eye(4)), target_file)
+    mask = sitk.GetImageFromArray(mask)
+    mask.CopyInformation(original_image)
+    writer = sitk.ImageFileWriter()
+    writer.SetFileName(target_file)
+    writer.Execute(mask)
