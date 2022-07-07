@@ -1,3 +1,6 @@
+# Copyright (c) Martin Cerny 2022
+# Licensed under Creative Commons Zero v1.0 Universal license
+
 import sys
 import json
 import os

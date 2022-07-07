@@ -1,3 +1,6 @@
+# Copyright (c) Martin Cerny 2022
+# Licensed under Creative Commons Zero v1.0 Universal license
+
 import tensorflow as tf
 import tensorflow.keras.backend as K
 import os

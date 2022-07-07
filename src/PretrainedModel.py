@@ -1,6 +1,7 @@
-'''
-This is a copy of the file unet.py from https://github.com/MaciejMazurowski/brain-segmentation
-'''
+# This is a modified copy of the file flair-segmentation/net.py from https://github.com/MaciejMazurowski/brain-segmentation
+# Copyright (c) Mateusz Buda and Maciej Mazurowski 2019
+# Distributed with a kind permission from the authors
+# Licensed under Attribution-NonCommercial-ShareAlike 4.0 International license
 
 from __future__ import print_function
 
