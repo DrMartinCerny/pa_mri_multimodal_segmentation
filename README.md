@@ -5,6 +5,8 @@ This is a code repository accompanying the article **Fully automated pipeline fo
 
 pip install -r requirements.txt
 
+python download_data.py
+
 python 1_create_dataset.py data/config/default.yaml data/example-dataset data/dataset.h5
 
 python 2_train_segmentation.py data/config/default.yaml data/dataset.h5 data/model
