@@ -1,6 +1,8 @@
 # Pituitary Adenoma Segmentation From Multimodal MRI Images
 This is a code repository accompanying the article **Fully automated pipeline for pituitary adenoma segmentation: Convolutional Neural Network based model on sparsely annotated MRI** by Cerny M. et al. (not published yet)
 
+This program and/or it's parts are not intended for clin ical use
+
 ## Usage:
 
 pip install -r requirements.txt

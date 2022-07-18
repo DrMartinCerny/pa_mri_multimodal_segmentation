@@ -1,5 +1,6 @@
 # Copyright (c) Martin Cerny 2022
 # Licensed under Creative Commons Zero v1.0 Universal license
+# Not intended for clinical use
 
 import sys
 import os
